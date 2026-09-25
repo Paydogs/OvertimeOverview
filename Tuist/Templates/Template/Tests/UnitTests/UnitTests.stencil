@@ -1,0 +1,17 @@
+//
+//  {{ name }}Tests.swift
+//  {{ name }}
+//
+//  Created by {{ author }} on {{ date }}.
+//
+
+import Testing
+@testable import {{ name }}
+
+struct {{ name }}Tests {
+
+    @Test func example() async throws {
+        // Write your test here and use APIs like `#expect(...)` to check expected conditions.
+    }
+
+}

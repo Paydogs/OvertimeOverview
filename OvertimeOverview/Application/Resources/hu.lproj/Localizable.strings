@@ -1,0 +1,78 @@
+"app_name" = "OvertimeOverview";
+"language_code_en" = "Angol";
+"language_code_hu" = "Magyar";
+
+/* Duration in hours and minutes, e.g. 7ó 32p */
+"format_hoursMinutes" = "%1$dó %2$dp";
+/* Duration under an hour in minutes, e.g. 25 perc */
+"format_minutes" = "%d perc";
+
+"tab_today" = "Ma";
+"tab_history" = "Előzmények";
+"tab_settings" = "Beállítások";
+
+"today_now" = "Most  %@";
+"today_progress" = "%1$d%% / %2$@";
+"today_overtime" = "Túlóra: %@";
+"today_undertime" = "Hiány: %@";
+"status_atOffice" = "Az irodában %1$@ óta";
+"status_done" = "Mára kész";
+"status_onBreak" = "Szünetben — a folytatáshoz jelentkezz be";
+"status_notAtOffice" = "Nem vagy az irodában";
+"finish_finishes" = "A munkanap %1$@-kor ér véget";
+"finish_finished" = "A munkanap %1$@-kor véget ért";
+"button_clockIn" = "Érkezés";
+"button_clockBackIn" = "Visszaérkezés";
+"button_break" = "Távozás szünetre";
+"button_endOfDay" = "Mai nap zárása";
+"worktime_title" = "Munkaidő";
+"worktime_net" = "Munkaidő: %@";
+"worktime_breakdown" = "Irodában %1$@ · ebéd −%2$@";
+"picker_clockIn" = "Érkezés időpontja";
+"picker_breakOut" = "Távozás időpontja (szünet)";
+"picker_endOfDay" = "Távozás időpontja (nap zárása)";
+"common_ok" = "OK";
+"common_cancel" = "Mégse";
+
+"today_emptySessions" = "Ma még nincs bejegyzés. Koppints egy bejegyzésre a szerkesztéshez.";
+"session_now" = "most";
+"session_edit" = "Bejegyzés szerkesztése";
+"session_start" = "Kezdés: %@";
+"session_end" = "Befejezés: %@";
+"session_delete" = "Törlés";
+"session_close" = "Bezárás";
+"picker_start" = "Kezdés időpontja";
+"picker_end" = "Befejezés időpontja";
+
+"history_empty" = "Még nincsenek korábbi napok.";
+"history_monthWorktime" = "Munkaidő %@";
+"history_monthOvertime" = "Túlóra %@";
+"history_monthUndertime" = "Hiány %@";
+"history_inOfficeSessions" = "Irodában %1$@ · %2$d bejegyzés";
+"history_noSessions" = "Nincs bejegyzés.";
+
+"settings_work" = "Munkaidő hossza";
+"settings_workSubtitle" = "A napi elvégzendő munkaidő";
+"settings_lunch" = "Ebéd hossza";
+"settings_lunchSubtitle" = "Hozzáadódik az irodai célhoz, levonódik a munkaidőből";
+"settings_officeTarget" = "Irodai cél: %@ (munka + ebéd)";
+"settings_pickWork" = "Munkaidő (óra : perc)";
+"settings_pickLunch" = "Ebéd hossza (óra : perc)";
+"settings_haptics" = "Rezgés";
+"settings_hapticsSubtitle" = "Reakció a gombok megérintésére";
+"settings_hapticStrength" = "Erősség: %d%%";
+"settings_hapticPattern" = "Minta";
+"haptic_single" = "Egyszer";
+"haptic_double" = "Dupla";
+"haptic_triple" = "Hármas";
+"haptic_long" = "Hosszú";
+"settings_testHaptics" = "Rezgés tesztelése";
+"settings_backup" = "Biztonsági mentés";
+"settings_export" = "Mentés exportálása";
+"settings_import" = "Mentés importálása";
+"backup_importQuestion" = "Cseréled az összes bejegyzést, vagy egyesítsed a meglévőkkel?";
+"backup_replace" = "Csere";
+"backup_merge" = "Egyesítés";
+"backup_imported" = "%d bejegyzés importálva";
+"backup_failed" = "A mentési fájl nem olvasható";
+"backup_exportFailed" = "A mentési fájl nem hozható létre";

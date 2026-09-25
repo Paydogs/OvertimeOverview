@@ -1,0 +1,15 @@
+"widget_name" = "Worktime";
+"widget_inSince" = "In since %@";
+"widget_done" = "Done for today";
+"widget_notClockedIn" = "Not clocked in";
+"widget_clockIn" = "Clock In";
+"widget_clockOut" = "Clock Out";
+"widget_description" = "Clock in or out, or open the Worktime screen";
+
+/* Keys needed by Formatters (compiled into the widget via Domain) */
+"format_hoursMinutes" = "%1$dh %2$dm";
+"format_minutes" = "%d min";
+
+/* Keys needed by Localization (compiled into the widget for Keys.tr) */
+"language_code_en" = "English";
+"language_code_hu" = "Hungarian";

@@ -1,0 +1,81 @@
+"app_name" = "OvertimeOverview";
+"language_code_en" = "English";
+"language_code_hu" = "Hungarian";
+
+/* Test-only key: exists in English only to verify base-language fallback */
+"test_englishOnly" = "English only string";
+
+/* Duration in hours and minutes, e.g. 7h 32m */
+"format_hoursMinutes" = "%1$dh %2$dm";
+/* Duration under an hour in minutes, e.g. 25 min */
+"format_minutes" = "%d min";
+
+"tab_today" = "Today";
+"tab_history" = "History";
+"tab_settings" = "Settings";
+
+"today_now" = "Now  %@";
+"today_progress" = "%1$d%% of %2$@";
+"today_overtime" = "Overtime: %@";
+"today_undertime" = "Undertime: %@";
+"status_atOffice" = "At the office since %@";
+"status_done" = "Done for today";
+"status_onBreak" = "On a break — Clock in to continue";
+"status_notAtOffice" = "Not at the office";
+"finish_finishes" = "Workday finishes at %@";
+"finish_finished" = "Workday finished at %@";
+"button_clockIn" = "Clock in";
+"button_clockBackIn" = "Clock back in";
+"button_break" = "Clock out for a break";
+"button_endOfDay" = "Clock out for today";
+"worktime_title" = "Worktime";
+"worktime_net" = "Worktime: %@";
+"worktime_breakdown" = "In office %1$@ · lunch −%2$@";
+"picker_clockIn" = "Clock-in time";
+"picker_breakOut" = "Clock-out time (break)";
+"picker_endOfDay" = "Clock-out time (end of day)";
+"common_ok" = "OK";
+"common_cancel" = "Cancel";
+
+"today_emptySessions" = "No sessions yet today. Tap a session to edit its times.";
+"session_now" = "now";
+"session_edit" = "Edit session";
+"session_start" = "Start: %@";
+"session_end" = "End: %@";
+"session_delete" = "Delete";
+"session_close" = "Close";
+"picker_start" = "Start time";
+"picker_end" = "End time";
+
+"history_empty" = "No previous days yet.";
+"history_monthWorktime" = "Worktime %@";
+"history_monthOvertime" = "Overtime %@";
+"history_monthUndertime" = "Undertime %@";
+"history_inOfficeSessions" = "In office %1$@ · %2$d sessions";
+"history_noSessions" = "No sessions.";
+
+"settings_work" = "Work time";
+"settings_workSubtitle" = "Actual work you owe per day";
+"settings_lunch" = "Lunch length";
+"settings_lunchSubtitle" = "Added to the office target, deducted from worktime";
+"settings_officeTarget" = "Office target: %@ (work + lunch)";
+"settings_pickWork" = "Work time (hours : minutes)";
+"settings_pickLunch" = "Lunch length (hours : minutes)";
+"settings_haptics" = "Haptics";
+"settings_hapticsSubtitle" = "Haptic feedback on button taps";
+"settings_hapticStrength" = "Strength: %d%%";
+"settings_hapticPattern" = "Pattern";
+"haptic_single" = "Single";
+"haptic_double" = "Double";
+"haptic_triple" = "Triple";
+"haptic_long" = "Long";
+"settings_testHaptics" = "Test haptics";
+"settings_backup" = "Backup";
+"settings_export" = "Export backup";
+"settings_import" = "Import backup";
+"backup_importQuestion" = "Replace all sessions or merge with existing?";
+"backup_replace" = "Replace";
+"backup_merge" = "Merge";
+"backup_imported" = "Imported %d sessions";
+"backup_failed" = "Could not read the backup file";
+"backup_exportFailed" = "Could not create the backup file";
