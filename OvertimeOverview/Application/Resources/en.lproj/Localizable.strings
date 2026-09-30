@@ -61,6 +61,11 @@
 
 "picker_day" = "Day";
 
+"excel_date" = "Date";
+"excel_start" = "Start time";
+"excel_end" = "End time";
+"excel_elapsed" = "Elapsed";
+
 "history_empty" = "No previous days yet.";
 "history_monthWorktime" = "Worktime %@";
 "history_monthOvertime" = "Overtime %@";
@@ -90,6 +95,7 @@
 "settings_icloudSync" = "iCloud sync";
 "settings_icloudSyncSubtitle" = "Sync sessions across your devices — applied at next launch";
 "settings_export" = "Export backup";
+"settings_exportExcel" = "Export as Excel";
 "settings_import" = "Import backup";
 "backup_importQuestion" = "Replace all sessions or merge with existing?";
 "backup_replace" = "Replace";

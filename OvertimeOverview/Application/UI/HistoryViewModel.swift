@@ -40,6 +40,7 @@ final class HistoryViewModel {
             days: worktime.days,
             now: now,
             dayEnded: settings.endedToday(now: now),
+            isWorking: worktime.openSession != nil,
             calendar: .current
         )
         return WorktimeMath.groupByMonth(candidates, calendar: .current).map { month in

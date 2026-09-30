@@ -10,11 +10,13 @@ struct StatusEntry: TimelineEntry {
     let date: Date
     let statusText: String
     let isWorking: Bool
+    /// "Leave ≈ HH:mm" while the session is open; nil otherwise.
+    let leaveText: String?
 }
 
 struct WorktimeStatusProvider: TimelineProvider {
     func placeholder(in context: Context) -> StatusEntry {
-        StatusEntry(date: .now, statusText: NSLocalizedString("widget_notClockedIn", comment: ""), isWorking: false)
+        StatusEntry(date: .now, statusText: NSLocalizedString("widget_notClockedIn", comment: ""), isWorking: false, leaveText: nil)
     }
 
     func getSnapshot(in context: Context, completion: @escaping (StatusEntry) -> Void) {
@@ -33,25 +35,43 @@ struct WorktimeStatusProvider: TimelineProvider {
     private func currentEntry() async -> StatusEntry {
         let now = Date()
         guard let container = try? WorktimeStore.makeModelContainer() else {
-            return StatusEntry(date: now, statusText: NSLocalizedString("widget_notClockedIn", comment: ""), isWorking: false)
+            return StatusEntry(date: now, statusText: NSLocalizedString("widget_notClockedIn", comment: ""), isWorking: false, leaveText: nil)
         }
         let store = WorktimeStore(modelContainer: container)
-        let endedToday = await MainActor.run { WorktimeSettings.shared.endedToday(now: now) }
+        let calendar = Calendar.current
+        // WorktimeSettings.shared is @MainActor — read both values in one hop.
+        let (endedToday, officeTarget) = await MainActor.run {
+            (WorktimeSettings.shared.endedToday(now: now), WorktimeSettings.shared.officeTarget)
+        }
         // try? does not double-wrap optionals (SE-0230), so a single binding suffices.
         if let open = try? await store.openSession() {
+            // Same projection as the app's Today screen: presence so far vs. the office target.
+            let sessions = (try? await store.allSessions()) ?? []
+            let presence = WorktimeMath.presence(
+                WorktimeMath.todaysSessions(sessions, now: now, calendar: calendar),
+                now: now
+            )
+            let finish = WorktimeMath.projectedFinish(now: now, presence: presence, target: officeTarget)
             return StatusEntry(
                 date: now,
                 statusText: String(
                     format: NSLocalizedString("widget_inSince", comment: ""),
                     Formatters.clock(open.start)
                 ),
-                isWorking: true
+                isWorking: true,
+                leaveText: Keys.widgetLeave(Formatters.clock(finish))
             )
         }
-        if endedToday {
-            return StatusEntry(date: now, statusText: NSLocalizedString("widget_done", comment: ""), isWorking: false)
-        }
-        return StatusEntry(date: now, statusText: NSLocalizedString("widget_notClockedIn", comment: ""), isWorking: false)
+        let notClockedIn = StatusEntry(
+            date: now,
+            statusText: NSLocalizedString(
+                endedToday ? "widget_done" : "widget_notClockedIn",
+                comment: ""
+            ),
+            isWorking: false,
+            leaveText: nil
+        )
+        return notClockedIn
     }
 }
 
@@ -70,7 +90,9 @@ struct WorktimeWidgetView: View {
         startPoint: .topLeading, endPoint: .bottomTrailing
     )
 
-    /// The likely next action gets the gradient fill; the other one sits in glass.
+    /// The likely next action shows its gradient at full strength; the other one
+    /// stays on the same gradient, dimmed — both render as colors, so widget
+    /// state swaps crossfade simply instead of jumping between fill kinds.
     private func punchLabel(icon: String, prominent: Bool, gradient: LinearGradient) -> some View {
         Image(systemName: icon)
             .font(.body.weight(.semibold))
@@ -78,10 +100,9 @@ struct WorktimeWidgetView: View {
             .padding(.vertical, 9)
             .foregroundStyle(.white)
             .background(
-                prominent ? AnyShapeStyle(gradient) : AnyShapeStyle(.ultraThinMaterial),
+                AnyShapeStyle(gradient.opacity(prominent ? 1 : 0.3)),
                 in: Capsule()
             )
-            .overlay(Capsule().strokeBorder(Color.white.opacity(prominent ? 0 : 0.15), lineWidth: 1))
     }
 
     var body: some View {
@@ -95,6 +116,13 @@ struct WorktimeWidgetView: View {
                 .font(.title3.weight(.semibold).monospacedDigit())
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
+            if let leaveText = entry.leaveText {
+                Text(leaveText)
+                    .font(.subheadline.weight(.medium).monospacedDigit())
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+            }
             Spacer(minLength: 0)
             HStack(spacing: 10) {
                 Button(intent: ClockInIntent()) {

@@ -18,8 +18,8 @@ struct HistoryView: View {
             )
         }
         .sheet(item: $selectedDay) { day in
-            DaySessionsSheet(day: day, now: Date())
-                .presentationDetents([.medium])
+            DaySessionsSheet(day: day, now: Date(), appModel: appModel)
+                .presentationDetents([.medium, .large])
         }
     }
 }
@@ -200,38 +200,84 @@ private struct DayRow: View {
     }
 }
 
+/// The tapped day's sessions, editable like the Today screen: tap a session to
+/// adjust its times or delete it, + adds a new one on that day. The list reloads
+/// from the model after each edit, so it reflects the fresh times.
 private struct DaySessionsSheet: View {
     let day: WorkDay
     let now: Date
+    let appModel: AppModel
+    private let calendar = Calendar.current
     @Environment(\.dismiss) private var dismiss
+    @State private var sessions: [WorkSession] = []
+    @State private var editingSession: WorkSession?
+    @State private var editingEnd = false
+    @State private var showingAdd = false
 
     var body: some View {
         NavigationStack {
             List {
-                if day.sessions.isEmpty {
+                if sessions.isEmpty {
                     Text(Keys.historyNoSessions)
                 }
-                ForEach(day.sessions) { session in
-                    HStack {
-                        Text(session.isOpen
-                             ? "\(Formatters.clock(session.start)) – \(Keys.sessionNow)"
-                             : "\(Formatters.clock(session.start)) – \(Formatters.clock(session.end!))")
-                        Spacer()
-                        Text(Formatters.duration(session.duration(now: now)))
+                ForEach(sessions) { session in
+                    Button {
+                        HapticsController.play(appModel.haptics.settings)
+                        editingSession = session
+                        editingEnd = false
+                    } label: {
+                        HStack {
+                            Text(session.isOpen
+                                 ? "\(Formatters.clock(session.start)) – \(Keys.sessionNow)"
+                                 : "\(Formatters.clock(session.start)) – \(Formatters.clock(session.end!))")
+                            Spacer()
+                            Text(Formatters.duration(session.duration(now: now)))
+                        }
+                        .foregroundStyle(.primary)
+                        .monospacedDigit()
                     }
+                    .buttonStyle(.plain)
                 }
             }
             .navigationTitle(Formatters.weekdayDay(day.dayStart))
             .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        HapticsController.play(appModel.haptics.settings)
+                        showingAdd = true
+                    } label: {
+                        Image(systemName: "plus")
+                    }
+                }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(Keys.sessionClose) { dismiss() }
                 }
             }
         }
+        .sheet(item: $editingSession) { session in
+            SessionEditSheet(session: session, editingEnd: editingEnd, appModel: appModel)
+        }
+        .sheet(isPresented: $showingAdd) {
+            AddSessionSheet(appModel: appModel, initialDay: day.dayStart)
+        }
+        .onAppear(perform: refresh)
+        // Re-fetch whenever either editor sheet goes away, so the rows follow.
+        .onChange(of: editingSession, refresh)
+        .onChange(of: showingAdd, refresh)
+    }
+
+    private func refresh() {
+        Task {
+            await appModel.viewModel.refresh()
+            let dayStart = calendar.startOfDay(for: day.dayStart)
+            sessions = appModel.viewModel.todaysSessions(now: day.dayStart)
+                .filter { calendar.isDate($0.start, inSameDayAs: dayStart) }
+                .sorted { $0.start < $1.start }
+        }
     }
 }
 // MARK: - Previews
-
+#if DEBUG
 #Preview("History") {
     HistoryView()
         .environment(previewAppModel(seed: .history))
@@ -261,7 +307,9 @@ private struct DaySessionsSheet: View {
                 ),
             ]
         ),
-        now: .now
+        now: .now,
+        appModel: previewAppModel(seed: .history)
     )
     .preferredColorScheme(.dark)
 }
+#endif

@@ -48,10 +48,14 @@ enum WorktimeMath {
         netPerDay.reduce(0) { $0 + ($1 - workPerDay) }
     }
 
-    /// Past days, plus today only when the day has been marked ended.
-    static func historyCandidates(days: [WorkDay], now: Date, dayEnded: Bool, calendar: Calendar) -> [WorkDay] {
+    /// Past days, plus today when the day has ended or is still running with an
+    /// open session — so the workday in progress is visible on History too.
+    static func historyCandidates(
+        days: [WorkDay], now: Date, dayEnded: Bool, isWorking: Bool, calendar: Calendar
+    ) -> [WorkDay] {
         let today = calendar.startOfDay(for: now)
-        return days.filter { $0.dayStart < today || ($0.dayStart == today && dayEnded) }
+        let todayVisible = dayEnded || isWorking
+        return days.filter { $0.dayStart < today || ($0.dayStart == today && todayVisible) }
     }
 
     static func groupByMonth(_ days: [WorkDay], calendar: Calendar) -> [(monthStart: Date, days: [WorkDay])] {

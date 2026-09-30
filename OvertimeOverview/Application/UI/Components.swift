@@ -125,6 +125,17 @@ struct ValuePill: View {
 struct RingProgress: View {
     let progress: Double
     var lineWidth: CGFloat = 14
+    /// Solid stroke replacing the default violet→blue gradient (the overtime ring).
+    var stroke: AnyShapeStyle? = nil
+
+    private var progressStroke: AnyShapeStyle {
+        stroke ?? AnyShapeStyle(
+            LinearGradient(
+                colors: [Theme.overtimeFill, Theme.accent],
+                startPoint: .topLeading, endPoint: .bottomTrailing
+            )
+        )
+    }
 
     var body: some View {
         ZStack {
@@ -133,10 +144,7 @@ struct RingProgress: View {
             Circle()
                 .trim(from: 0, to: max(0.02, min(1, progress)))
                 .stroke(
-                    LinearGradient(
-                        colors: [Theme.overtimeFill, Theme.accent],
-                        startPoint: .topLeading, endPoint: .bottomTrailing
-                    ),
+                    progressStroke,
                     style: StrokeStyle(lineWidth: lineWidth, lineCap: .round)
                 )
                 .rotationEffect(.degrees(-90))
@@ -196,7 +204,7 @@ struct DayChip: View {
 }
 
 // MARK: - Previews
-
+#if DEBUG
 #Preview("Components") {
     ScrollView {
         VStack(alignment: .leading, spacing: 18) {
@@ -226,3 +234,4 @@ struct DayChip: View {
     }
     .appBackdrop(.today)
 }
+#endif

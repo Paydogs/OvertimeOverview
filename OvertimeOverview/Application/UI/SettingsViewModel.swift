@@ -8,8 +8,8 @@ import UniformTypeIdentifiers
 import Observation
 
 /// Settings screen state: the backup flow (export / import confirmation /
-/// alerts) and the haptics-config actions. The sheet presented from `shareURL`
-/// and the alert bound to `alertMessage` are view-level plumbing.
+/// alerts) and the haptics-config actions. Exports open the system location
+/// picker bound to `shareURL`; the alert is view-level plumbing.
 @MainActor
 @Observable
 final class SettingsViewModel {
@@ -63,6 +63,23 @@ final class SettingsViewModel {
             .appendingPathComponent("overtimeoverview-\(Formatters.exportStamp(Date())).json")
         try data.write(to: url, options: .atomic)
         return url
+    }
+
+    // MARK: - Excel export
+
+    /// Builds the .xlsx from every session; open ones export without End/Elapsed
+    /// until closed. Shares through the same sheet as the JSON backup.
+    func exportExcel() {
+        do {
+            let sessions = worktime.days.flatMap(\.sessions)
+            let data = try ExcelExporter.makeWorkbook(sessions: sessions, calendar: .current)
+            let url = FileManager.default.temporaryDirectory
+                .appendingPathComponent("overtimeoverview-\(Formatters.exportStamp(Date())).xlsx")
+            try data.write(to: url, options: .atomic)
+            shareURL = url
+        } catch {
+            alertMessage = Keys.backupExportFailed
+        }
     }
 
     /// Reads an imported file (security-scoped); asks replace-or-merge in the dialog.

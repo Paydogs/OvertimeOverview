@@ -58,6 +58,11 @@
 
 "picker_day" = "Nap";
 
+"excel_date" = "Dátum";
+"excel_start" = "Kezdés";
+"excel_end" = "Végzés";
+"excel_elapsed" = "Eltelt";
+
 "history_empty" = "Még nincsenek korábbi napok.";
 "history_monthWorktime" = "Munkaidő %@";
 "history_monthOvertime" = "Túlóra %@";
@@ -87,6 +92,7 @@
 "settings_icloudSync" = "iCloud szinkronizálás";
 "settings_icloudSyncSubtitle" = "Bejegyzések szinkronizálása eszközeid között — indítás után érvényesül";
 "settings_export" = "Mentés exportálása";
+"settings_exportExcel" = "Exportálás Excelbe";
 "settings_import" = "Mentés importálása";
 "backup_importQuestion" = "Cseréled az összes bejegyzést, vagy egyesítsed a meglévőkkel?";
 "backup_replace" = "Csere";

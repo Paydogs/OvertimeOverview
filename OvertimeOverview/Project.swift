@@ -1,8 +1,8 @@
 @preconcurrency import ProjectDescription
 import Foundation
 
-let devMarketingVersion = "0.1.0"
-let releaseMarketingVersion = "0.1.0"
+let devMarketingVersion = "1.1.0"
+let releaseMarketingVersion = "1.0.0"
 
 let buildNumber = gitCommitCount()
 
@@ -27,6 +27,11 @@ let defaultApp = Target.target(
         with: [
             "CFBundleShortVersionString": "$(MARKETING_VERSION)",
             "CFBundleVersion": "$(CURRENT_PROJECT_VERSION)",
+            // Spaced app name shows on the home screen; the product name has none.
+            "CFBundleDisplayName": .string("Overtime Overview"),
+            // Export-compliance declaration (as in Analog):
+            // the app ships only App Store–exempt encryption (system APIs).
+            "ITSAppUsesNonExemptEncryption": false,
             "DEVELOPMENT_TEAM": .string(developmentTeam),
             "CODE_SIGN_STYLE": "Automatic",
             "UILaunchScreen": [
@@ -46,7 +51,12 @@ let defaultApp = Target.target(
     dependencies: [
         .external(name: "Logging"),
         .target(name: "WorktimeWidget")
-    ]
+    ],
+    settings: .settings(
+        // Target level on purpose: Tuist injects its own target-level
+        // "AppIcon" default that a project-level value would lose to.
+        base: ["ASSETCATALOG_COMPILER_APPICON_NAME": .string("OvertimeOverviewLogo")]
+    )
 )
 
 // 2. The Widget Extension Target
@@ -59,6 +69,10 @@ let worktimeWidget = Target.target(
     infoPlist: .extendingDefault(
         with: [
             "NSExtension": ["NSExtensionPointIdentifier": "com.apple.widgetkit-extension"],
+            // App extensions must show their own display name on install/archive.
+            "CFBundleDisplayName": .string("Overtime Overview"),
+            // Same exempt-encryption declaration for the extension.
+            "ITSAppUsesNonExemptEncryption": false,
             "CFBundleShortVersionString": "$(MARKETING_VERSION)",
             "CFBundleVersion": "$(CURRENT_PROJECT_VERSION)",
             "DEVELOPMENT_TEAM": .string(developmentTeam),

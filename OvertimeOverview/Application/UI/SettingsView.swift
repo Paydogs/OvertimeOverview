@@ -70,7 +70,7 @@ struct SettingsView: View {
             Button(Keys.commonCancel, role: .cancel) { appModel.preferences.cancelImport() }
         }
         .sheet(item: shareItemBinding) { item in
-            ShareSheet(url: item.url)
+            ExportFilePicker(url: item.url)
         }
         .alert(
             Keys.settingsBackup,
@@ -258,6 +258,17 @@ struct SettingsView: View {
             }
             rowDivider
             rowButton(
+                icon: "tablecells",
+                tileFill: Theme.tileBlue,
+                title: Keys.settingsExportExcel,
+                subtitle: nil
+            ) {
+                chevron
+            } action: {
+                appModel.preferences.exportExcel()
+            }
+            rowDivider
+            rowButton(
                 icon: "square.and.arrow.down",
                 tileFill: Theme.tileGray,
                 title: Keys.settingsImport,
@@ -335,15 +346,16 @@ extension View {
     }
 }
 
-/// UIKit share sheet for the exported file.
-private struct ShareSheet: UIViewControllerRepresentable {
+/// The system export-location picker: the user chooses where the file lands —
+/// iCloud Drive, a Files folder, anything — and it is written there as a copy.
+private struct ExportFilePicker: UIViewControllerRepresentable {
     let url: URL
 
-    func makeUIViewController(context: Context) -> UIActivityViewController {
-        UIActivityViewController(activityItems: [url], applicationActivities: nil)
+    func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
+        UIDocumentPickerViewController(forExporting: [url], asCopy: true)
     }
 
-    func updateUIViewController(_ controller: UIActivityViewController, context: Context) {}
+    func updateUIViewController(_ controller: UIDocumentPickerViewController, context: Context) {}
 }
 
 /// Hours:minutes wheel picker used for work time and lunch length.
@@ -386,7 +398,7 @@ private struct DurationPickerSheet: View {
     }
 }
 // MARK: - Previews
-
+#if DEBUG
 #Preview("Settings") {
     SettingsView()
         .environment(previewAppModel(seed: .empty))
@@ -403,3 +415,4 @@ private struct DurationPickerSheet: View {
     DurationPickerSheet(title: "Work time", minutes: 450) { _ in }
         .preferredColorScheme(.dark)
 }
+#endif

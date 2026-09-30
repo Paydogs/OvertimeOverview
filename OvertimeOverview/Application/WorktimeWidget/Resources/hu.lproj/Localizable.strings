@@ -1,5 +1,6 @@
 "widget_name" = "Munkaidő";
 "widget_inSince" = "Bent %1$@ óta";
+"widget_leave" = "Távozás ≈ %@";
 "widget_done" = "Mára kész";
 "widget_notClockedIn" = "Nincs bejelentkezve";
 "widget_clockIn" = "Érkezés";
@@ -9,6 +10,12 @@
 /* Keys needed by Formatters (compiled into the widget via Domain) */
 "format_hoursMinutes" = "%1$dó %2$dp";
 "format_minutes" = "%d perc";
+
+/* Keys needed by ExcelExporter (compiled into the widget via Domain) */
+"excel_date" = "Dátum";
+"excel_start" = "Kezdés";
+"excel_end" = "Végzés";
+"excel_elapsed" = "Eltelt";
 
 /* Keys needed by Localization (compiled into the widget for Keys.tr) */
 "language_code_en" = "Angol";

@@ -68,27 +68,45 @@ private struct TodayContentView: View {
         }
     }
 
+    /// In overtime once presence passes the office target for the day.
+    private var isOvertime: Bool {
+        appModel.today.overtime(now: now) > 0
+    }
+
     private var timeRing: some View {
-        RingProgress(progress: appModel.today.ringProgress(now: now), lineWidth: 14)
-            .frame(width: 232, height: 232)
-            .overlay {
-                VStack(spacing: 2) {
-                    Text(Keys.todayElapsed)
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(Theme.secondaryText)
-                    Text(Formatters.elapsed(appModel.today.presence(now: now)))
-                        .font(DisplayFont.timer(46))
+        RingProgress(
+            progress: appModel.today.ringProgress(now: now),
+            lineWidth: 14,
+            stroke: isOvertime ? AnyShapeStyle(Theme.negativeText) : nil
+        )
+        .frame(width: 232, height: 232)
+        .overlay {
+            VStack(spacing: 2) {
+                Text(Keys.todayElapsed)
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Theme.secondaryText)
+                Text(Formatters.elapsed(appModel.today.presence(now: now)))
+                    .font(DisplayFont.timer(46))
+                    .monospacedDigit()
+                    .minimumScaleFactor(0.4)
+                    .lineLimit(1)
+                    .foregroundStyle(.primary)
+                if isOvertime {
+                    Text(Keys.todayOvertime(Formatters.duration(appModel.today.overtime(now: now))))
+                        .font(.footnote.weight(.bold))
                         .monospacedDigit()
-                        .minimumScaleFactor(0.4)
+                        .foregroundStyle(Theme.negativeText)
                         .lineLimit(1)
-                        .foregroundStyle(.primary)
-                    Text(Keys.todayNow(Formatters.clockWithSeconds(now)))
-                        .font(.footnote)
-                        .foregroundStyle(Theme.secondaryText)
+                        .minimumScaleFactor(0.6)
                 }
-                .padding(.horizontal, 36)
+                Text(Keys.todayNow(Formatters.clockWithSeconds(now)))
+                    .font(.footnote)
+                    .foregroundStyle(Theme.secondaryText)
             }
-            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 36)
+        }
+        .animation(.smooth, value: isOvertime)
+        .frame(maxWidth: .infinity)
     }
 
     private var statusPill: some View {
@@ -138,12 +156,12 @@ private struct TodayContentView: View {
         let today = appModel.today
         return HStack(spacing: 12) {
             StatTile(
-                caption: Keys.worktimeTitle,
-                value: Formatters.duration(today.netWorktime(now: now))
-            )
-            StatTile(
                 caption: Keys.todayInOffice,
                 value: Formatters.duration(today.presence(now: now))
+            )
+            StatTile(
+                caption: Keys.worktimeTitle,
+                value: Formatters.duration(today.netWorktime(now: now))
             )
             StatTile(
                 caption: Keys.todayLunch,
@@ -162,11 +180,11 @@ private struct TodayContentView: View {
             } label: {
                 Label(Keys.buttonBreak, systemImage: "cup.and.saucer")
                     .font(.headline)
-                    .foregroundStyle(Theme.breakLabel)
+                    .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 17)
-                    .background(Theme.warm, in: Capsule())
-                    .shadow(color: Theme.warmShadow.opacity(0.35), radius: 30, y: 10)
+                    .background(Theme.brand, in: Capsule())
+                    .shadow(color: Theme.accent.opacity(0.35), radius: 14, y: 6)
             }
             Button {
                 HapticsController.play(appModel.haptics.settings)
@@ -174,10 +192,11 @@ private struct TodayContentView: View {
             } label: {
                 Label(Keys.buttonEndOfDay, systemImage: "arrow.right.to.line")
                     .font(.headline)
-                    .foregroundStyle(Theme.accent)
+                    .foregroundStyle(Theme.breakLabel)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 17)
-                    .capsuleSurface()
+                    .background(Theme.warm, in: Capsule())
+                    .shadow(color: Theme.warmShadow.opacity(0.35), radius: 30, y: 10)
             }
         } else {
             Button {
@@ -200,26 +219,51 @@ private struct TodayContentView: View {
 /// so previous days can be logged too. Overnight visits roll to the next day
 /// when the end time is earlier than the start time.
 struct AddSessionSheet: View {
-    let appModel: AppModel
     private let calendar = Calendar.current
+    let appModel: AppModel
+    /// Day the picker starts on — nil (today) from the + button, or the day
+    /// being edited when opened from History.
+    var initialDay: Date? = nil
     @Environment(\.dismiss) private var dismiss
     @State private var day: Date = .now
     @State private var start: Date = .now
     @State private var end: Date = .now
+    @State private var expandedRow: Row?
+    @State private var detent = PresentationDetent.height(Self.collapsedWheelDetent)
+
+    /// Accordion rows — only one picker open at a time.
+    private enum Row { case day, start, end }
+
+    /// Collapsed fits the three rows; expanded adds the wheel's height.
+    private static let collapsedWheelDetent: CGFloat = 300
+    private static let expandedWheelDetent: CGFloat = 540
 
     var body: some View {
         NavigationStack {
-            List {
-                DatePicker(Keys.pickerDay, selection: $day)
-                    .datePickerStyle(.wheel)
-                DatePicker(Keys.pickerStart, selection: $start, displayedComponents: .hourAndMinute)
-                DatePicker(Keys.pickerEnd, selection: $end, displayedComponents: .hourAndMinute)
+            VStack(spacing: 12) {
+                collapsibleRow(.day, title: Keys.pickerDay, value: dayValue) {
+                    DatePicker("", selection: $day)
+                        .datePickerStyle(.wheel)
+                        .labelsHidden()
+                }
+                collapsibleRow(.start, title: Keys.pickerStart, value: timeChip(start)) {
+                    DatePicker("", selection: $start, displayedComponents: .hourAndMinute)
+                        .datePickerStyle(.wheel)
+                        .labelsHidden()
+                }
+                collapsibleRow(.end, title: Keys.pickerEnd, value: timeChip(end)) {
+                    DatePicker("", selection: $end, displayedComponents: .hourAndMinute)
+                        .datePickerStyle(.wheel)
+                        .labelsHidden()
+                }
                 if !valid {
                     Text(Keys.addError)
                         .font(.footnote)
                         .foregroundStyle(Theme.negativeText)
                 }
             }
+            .padding(.horizontal, 16)
+            .padding(.top, 12)
             .navigationTitle(Keys.addTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -232,8 +276,73 @@ struct AddSessionSheet: View {
                 }
             }
         }
-        .presentationDetents([.medium])
+        .presentationDetents(
+            [.height(Self.collapsedWheelDetent), .height(Self.expandedWheelDetent)],
+            selection: $detent
+        )
         .onAppear(perform: seedTimes)
+    }
+
+    private func collapsibleRow(
+        _ row: Row,
+        title: String,
+        value: some View,
+        @ViewBuilder picker: () -> some View
+    ) -> some View {
+        let isExpanded = expandedRow == row
+        return VStack(spacing: 6) {
+            Button {
+                HapticsController.play(appModel.haptics.settings)
+                withAnimation(.smooth(duration: 0.3)) {
+                    expandedRow = isExpanded ? nil : row
+                    detent = PresentationDetent.height(
+                        isExpanded
+                            ? Self.collapsedWheelDetent
+                            : Self.expandedWheelDetent
+                    )
+                }
+            } label: {
+                HStack(spacing: 12) {
+                    Text(title)
+                        .font(.headline)
+                        .foregroundStyle(.primary)
+                    Spacer()
+                    value
+                    Image(systemName: "chevron.down")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(Theme.secondaryText)
+                        .rotationEffect(.degrees(isExpanded ? -180 : 0))
+                }
+                .padding(.vertical, 14)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            if isExpanded {
+                picker()
+            }
+        }
+        .padding(.horizontal, 16)
+        .cardSurface(cornerRadius: 20)
+    }
+
+    // Reuses the tab title's "Today": the same word, so one key covers both.
+    private var dayValue: some View {
+        Text(
+            calendar.isDateInToday(day)
+                ? Keys.tabToday
+                : Formatters.weekdayDay(day)
+        )
+        .font(.body.weight(.semibold))
+        .foregroundStyle(.primary)
+    }
+
+    private func timeChip(_ date: Date) -> some View {
+        Text(Formatters.clock(date))
+            .font(.body.weight(.semibold))
+            .monospacedDigit()
+            .padding(.horizontal, 14)
+            .padding(.vertical, 6)
+            .background(Theme.chipFill, in: Capsule())
     }
 
     private var valid: Bool { sameTime == false }
@@ -270,10 +379,10 @@ struct AddSessionSheet: View {
     }
 
     private func seedTimes() {
-        let today = calendar.startOfDay(for: .now)
-        day = today
-        start = today.addingTimeInterval(9 * 3600)
-        end = today.addingTimeInterval(17 * 3600)
+        let seededDay = calendar.startOfDay(for: initialDay ?? .now)
+        day = seededDay
+        start = seededDay.addingTimeInterval(9 * 3600)
+        end = seededDay.addingTimeInterval(17 * 3600)
     }
 
     private func confirm() {
@@ -301,10 +410,12 @@ struct PunchTimePicker: View {
 
     var body: some View {
         NavigationStack {
-            DatePicker(title, selection: $pickerDate, displayedComponents: .hourAndMinute)
+            DatePicker("", selection: $pickerDate, displayedComponents: .hourAndMinute)
                 .datePickerStyle(.wheel)
+                .labelsHidden()
                 .padding()
-                .navigationTitle(Keys.worktimeTitle)
+                .navigationTitle(title)
+                .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
                         Button(Keys.commonCancel) { dismiss() }
@@ -421,7 +532,7 @@ private struct SessionRow: View {
     }
 }
 
-private struct SessionEditSheet: View {
+struct SessionEditSheet: View {
     let session: WorkSession
     let editingEnd: Bool
     let appModel: AppModel
@@ -433,10 +544,12 @@ private struct SessionEditSheet: View {
 
     var body: some View {
         NavigationStack {
-            DatePicker(title, selection: $pickerDate, displayedComponents: .hourAndMinute)
+            DatePicker("", selection: $pickerDate, displayedComponents: .hourAndMinute)
                 .datePickerStyle(.wheel)
+                .labelsHidden()
                 .padding()
-                .navigationTitle(Keys.sessionEdit)
+                .navigationTitle(title)
+                .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
                         Button(Keys.sessionClose) { dismiss() }
@@ -514,7 +627,7 @@ private struct SessionEditSheet: View {
     }
 }
 // MARK: - Previews
-
+#if DEBUG
 #Preview("Today — clocked in") {
     TodayView()
         .environment(previewAppModel(seed: .clockedIn))
@@ -563,3 +676,4 @@ private struct SessionEditSheet: View {
     )
     .preferredColorScheme(.dark)
 }
+#endif

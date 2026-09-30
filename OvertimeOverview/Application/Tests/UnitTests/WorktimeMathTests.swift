@@ -65,16 +65,21 @@ struct WorktimeMathTests {
         #expect(monthOvertime == 1800)
     }
 
-    @Test func historyCandidatesExcludesTodayUnlessEnded() {
+    @Test func historyCandidatesExcludesTodayUnlessEndedOrRunning() {
         let today = Self.date(12, 0, day: 23)
         let yesterday = Self.date(12, 0, day: 22)
         let days = [
             WorkDay(dayStart: Self.calendar.startOfDay(for: today), sessions: []),
             WorkDay(dayStart: Self.calendar.startOfDay(for: yesterday), sessions: []),
         ]
-        let notEnded = WorktimeMath.historyCandidates(days: days, now: today, dayEnded: false, calendar: Self.calendar)
-        #expect(notEnded.count == 1)
-        let ended = WorktimeMath.historyCandidates(days: days, now: today, dayEnded: true, calendar: Self.calendar)
+        let idle = WorktimeMath.historyCandidates(
+            days: days, now: today, dayEnded: false, isWorking: false, calendar: Self.calendar)
+        #expect(idle.count == 1)
+        let running = WorktimeMath.historyCandidates(
+            days: days, now: today, dayEnded: false, isWorking: true, calendar: Self.calendar)
+        #expect(running.count == 2)
+        let ended = WorktimeMath.historyCandidates(
+            days: days, now: today, dayEnded: true, isWorking: false, calendar: Self.calendar)
         #expect(ended.count == 2)
     }
 

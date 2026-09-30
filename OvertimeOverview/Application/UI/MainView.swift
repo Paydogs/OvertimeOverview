@@ -20,6 +20,7 @@ struct MainView: View {
     }
 }
 
+#if DEBUG
 #Preview {
     MainView()
         .environment(previewAppModel(seed: .clockedIn))
@@ -31,3 +32,4 @@ struct MainView: View {
         .environment(previewAppModel(seed: .clockedIn))
         .preferredColorScheme(.light)
 }
+#endif
