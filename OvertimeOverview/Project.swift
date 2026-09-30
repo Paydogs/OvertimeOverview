@@ -4,7 +4,68 @@ import Foundation
 let devMarketingVersion = "1.1.0"
 let releaseMarketingVersion = "1.0.0"
 
-let buildNumber = gitCommitCount()
+// Auto-incrementing build number (CURRENT_PROJECT_VERSION / CFBundleVersion). App Store
+// Connect rejects a (marketing version, build) pair it has already seen, so the number
+// must rise per archive — and the commit count only rises per commit, which is why the
+// same number kept coming out of repeated archives. The counter lives in a plain file
+// (one machine, one number): `tuist generate` reads it for the generate-time value, and
+// at archive time (ACTION=install) run-script phases bump/stamp it into both built
+// plists before code signing — the same PlistBuddy mechanism Analog uses for its count.
+func readBuildNumber() -> String {
+    // #filePath in the manifest is this Project.swift's path; fall back to the commit
+    // count when the counter file is missing (e.g. a fresh clone before it is committed).
+    let filePath = String(#filePath)
+        .replacingOccurrences(of: "Project.swift", with: "Support/buildNumber")
+    if let content = try? String(contentsOfFile: filePath, encoding: .utf8),
+       let number = Int(content.trimmingCharacters(in: .whitespacesAndNewlines)) {
+        return "\(number)"
+    }
+    return gitCommitCount()
+}
+
+let buildNumber = readBuildNumber()
+
+// Archive-time plist stamping. A normal (not install-only) post script sits in the
+// build-phase order BEFORE code signing, which is what lets a rewritten CFBundleVersion
+// land in the signed bundle. Both scripts no-op except on the install action (ACTION=install
+// is Xcode's archive signal), so plain build / build-for-testing keep the generate-time
+// number. Normal (non-archive) runs between archives always carry the last bumped value.
+enum BuildScripts {
+    /// Counter source of truth lives in Support/buildNumber; this bumps it once per
+    /// archive. It is attached to the WIDGET target because the widget builds first
+    /// as the app's dependency — stamping must see the final value.
+    static let bumpAndStampBuildNumber = TargetScript.post(
+        script: """
+        if [ "$ACTION" != "install" ]; then exit 0; fi
+        FILE="$SRCROOT/Support/buildNumber"
+        NEXT=$(( $(cat "$FILE" 2>/dev/null || echo 0) + 1 ))
+        printf '%s\\n' "$NEXT" > "$FILE"
+        PLIST="$BUILT_PRODUCTS_DIR/$INFOPLIST_PATH"
+        [ -f "$PLIST" ] || exit 0
+        /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $NEXT" "$PLIST" 2>/dev/null \
+            || /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string $NEXT" "$PLIST"
+        """,
+        name: "Bump & Stamp Build Number",
+        basedOnDependencyAnalysis: false
+    )
+
+    /// Stamps the same value the widget stamped, so app and appex never diverge.
+    /// No bump here — the widget target did it when it built first.
+    static let stampBuildNumber = TargetScript.post(
+        script: """
+        if [ "$ACTION" != "install" ]; then exit 0; fi
+        FILE="$SRCROOT/Support/buildNumber"
+        [ -f "$FILE" ] || exit 0
+        NEXT=$(cat "$FILE")
+        PLIST="$BUILT_PRODUCTS_DIR/$INFOPLIST_PATH"
+        [ -f "$PLIST" ] || exit 0
+        /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $NEXT" "$PLIST" 2>/dev/null \
+            || /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string $NEXT" "$PLIST"
+        """,
+        name: "Stamp Build Number",
+        basedOnDependencyAnalysis: false
+    )
+}
 
 // Signing identity, shared by the app and both test bundles: a test target without a team fails
 // to sign for a device, which is what `make build` (build-for-testing on a generic iOS device)
@@ -48,6 +109,7 @@ let defaultApp = Target.target(
     ],
     resources: ["Application/Resources/**"],
     entitlements: .file(path: "Support/OvertimeOverview.entitlements"),
+    scripts: [BuildScripts.stampBuildNumber],
     dependencies: [
         .external(name: "Logging"),
         .target(name: "WorktimeWidget")
@@ -91,7 +153,10 @@ let worktimeWidget = Target.target(
         .glob("Application/System/Localization/**/*.swift")
     ],
     resources: ["Application/WorktimeWidget/Resources/**"],
-    entitlements: .file(path: "Application/WorktimeWidget/Support/WorktimeWidget.entitlements")
+    entitlements: .file(path: "Application/WorktimeWidget/Support/WorktimeWidget.entitlements"),
+    // The widget is the app's dependency, so inside an archive this target builds
+    // first: its script performs the one bump, the app's stamps the shared value.
+    scripts: [BuildScripts.bumpAndStampBuildNumber]
 )
 
 // 3. The Unit Test Target (XCTest / Swift Testing)
