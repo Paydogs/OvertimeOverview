@@ -16,64 +16,32 @@ struct SettingsView: View {
     @State private var alertMessage: String?
 
     var body: some View {
-        Form {
-            Section(Keys.worktimeTitle) {
-                valueRow(
-                    title: Keys.settingsWork,
-                    subtitle: Keys.settingsWorkSubtitle,
-                    value: Formatters.duration(appModel.settings.workSeconds)
-                ) { pickingWork = true }
-                valueRow(
-                    title: Keys.settingsLunch,
-                    subtitle: Keys.settingsLunchSubtitle,
-                    value: Formatters.duration(appModel.settings.lunchSeconds)
-                ) { pickingLunch = true }
+        ScrollView {
+            VStack(alignment: .leading, spacing: 14) {
+                ScreenHeader(title: Keys.tabSettings)
+
+                sectionCaption(Keys.worktimeTitle)
+                worktimeCard
                 Text(Keys.settingsOfficeTarget(Formatters.duration(appModel.settings.officeTarget)))
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
+                    .foregroundStyle(Theme.secondaryText)
+                    .padding(.horizontal, 6)
 
-            Section {
-                Toggle(isOn: hapticsBinding) {
-                    VStack(alignment: .leading) {
-                        Text(Keys.settingsHaptics)
-                        Text(Keys.settingsHapticsSubtitle)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                if appModel.haptics.settings.enabled {
-                    VStack(alignment: .leading) {
-                        Text(Keys.settingsHapticStrength(Int(appModel.haptics.settings.strength * 100)))
-                        Slider(value: strengthBinding, in: 0.1...1)
-                    }
-                    Picker(Keys.settingsHapticPattern, selection: patternBinding) {
-                        ForEach(HapticPattern.allCases, id: \.self) { pattern in
-                            Text(Self.patternLabel(pattern)).tag(pattern)
-                        }
-                    }
-                    Button(Keys.settingsTestHaptics) {
-                        HapticsController.play(appModel.haptics.settings)
-                    }
-                }
-            }
+                sectionCaption(Keys.settingsHaptics)
+                hapticsCard
 
-            Section(Keys.settingsBackup) {
-                Button(Keys.settingsExport) { exportBackup() }
-                Button(Keys.settingsImport) { importing = true }
-            }
+                sectionCaption(Keys.settingsBackup)
+                backupCard
 
-            Section {
                 Text(Self.versionFooter)
                     .frame(maxWidth: .infinity, alignment: .center)
                     .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .listRowBackground(Color.clear)
+                    .foregroundStyle(Theme.secondaryText)
+                    .padding(.top, 4)
             }
+            .padding(.horizontal, 16)
         }
-        .scrollContentBackground(.hidden)
-        .midnightBackdrop()
-        .navigationTitle(Keys.tabSettings)
+        .appBackdrop()
         .sheet(isPresented: $pickingWork) {
             DurationPickerSheet(title: Keys.settingsPickWork, minutes: Int(appModel.settings.workSeconds / 60)) {
                 appModel.settings.updateWork(minutes: $0)
@@ -106,6 +74,182 @@ struct SettingsView: View {
             isPresented: Binding(get: { alertMessage != nil }, set: { if !$0 { alertMessage = nil } }),
             presenting: alertMessage
         ) { _ in } message: { message in Text(message) }
+    }
+
+    private func sectionCaption(_ title: String) -> some View {
+        Text(title)
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(Theme.secondaryText)
+            .padding(.horizontal, 6)
+    }
+
+    private var worktimeCard: some View {
+        VStack(spacing: 0) {
+            rowButton(
+                icon: "clock",
+                tileFill: Theme.tileBlue,
+                title: Keys.settingsWork,
+                subtitle: Keys.settingsWorkSubtitle
+            ) {
+                ValuePill(text: Formatters.duration(appModel.settings.workSeconds))
+            } action: {
+                pickingWork = true
+            }
+            rowDivider
+            rowButton(
+                icon: "fork.knife",
+                tileFill: Theme.tileOrange,
+                title: Keys.settingsLunch,
+                subtitle: Keys.settingsLunchSubtitle
+            ) {
+                ValuePill(text: Formatters.duration(appModel.settings.lunchSeconds))
+                    .lineLimit(2)
+                    .multilineTextAlignment(.trailing)
+            } action: {
+                pickingLunch = true
+            }
+        }
+        .cardSurface(cornerRadius: 22)
+    }
+
+    private var hapticsCard: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 14) {
+                IconTile(
+                    systemImage: "iphone.gen3.radiowaves.left.and.right",
+                    fill: Theme.tilePurple
+                )
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(Keys.settingsHaptics)
+                        .foregroundStyle(.primary)
+                    Text(Keys.settingsHapticsSubtitle)
+                        .font(.caption)
+                        .foregroundStyle(Theme.secondaryText)
+                }
+                Spacer()
+                Toggle("", isOn: hapticsBinding)
+                    .labelsHidden()
+            }
+            .settingsRow()
+
+            if appModel.haptics.settings.enabled {
+                rowDivider
+                HStack {
+                    Text(Keys.settingsHapticPattern)
+                        .foregroundStyle(.primary)
+                    Spacer()
+                    Picker("", selection: patternBinding) {
+                        ForEach(HapticPattern.allCases, id: \.self) { pattern in
+                            Text(Self.patternLabel(pattern)).tag(pattern)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .labelsHidden()
+                }
+                .settingsRow()
+
+                rowDivider
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text(Keys.settingsHapticStrengthLabel)
+                            .foregroundStyle(.primary)
+                        Spacer()
+                        Text(strengthPercent)
+                            .monospacedDigit()
+                            .foregroundStyle(Theme.secondaryText)
+                    }
+                    Slider(value: strengthBinding, in: 0.1...1)
+                }
+                .settingsRow()
+
+                rowDivider
+                Button {
+                    HapticsController.play(appModel.haptics.settings)
+                } label: {
+                    Text(Keys.settingsTestHaptics)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .foregroundStyle(Theme.accent)
+                }
+                .settingsRow()
+            }
+        }
+        .cardSurface(cornerRadius: 22)
+    }
+
+    private var backupCard: some View {
+        VStack(spacing: 0) {
+            rowButton(
+                icon: "square.and.arrow.up",
+                tileFill: Theme.tileGreen,
+                title: Keys.settingsExport,
+                subtitle: nil
+            ) {
+                Image(systemName: "chevron_right")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Theme.secondaryText)
+            } action: {
+                exportBackup()
+            }
+            rowDivider
+            rowButton(
+                icon: "square.and.arrow.down",
+                tileFill: Theme.tileGray,
+                title: Keys.settingsImport,
+                subtitle: nil
+            ) {
+                Image(systemName: "chevron_right")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Theme.secondaryText)
+            } action: {
+                importing = true
+            }
+        }
+        .cardSurface(cornerRadius: 22)
+    }
+
+    private var strengthPercent: String {
+        "\(Int((appModel.haptics.settings.strength * 100).rounded()))%"
+    }
+
+    // MARK: - Shared row scaffolding
+
+    private var rowDivider: some View {
+        Rectangle()
+            .fill(Theme.cardStroke)
+            .frame(height: 1)
+    }
+
+    private func rowButton<Trailing: View>(
+        icon: String,
+        tileFill: LinearGradient,
+        title: String,
+        subtitle: String?,
+        @ViewBuilder trailing: () -> Trailing,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button {
+            HapticsController.play(appModel.haptics.settings)
+            action()
+        } label: {
+            HStack(spacing: 14) {
+                IconTile(systemImage: icon, fill: tileFill)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(title)
+                        .foregroundStyle(.primary)
+                    if let subtitle {
+                        Text(subtitle)
+                            .font(.caption)
+                            .foregroundStyle(Theme.secondaryText)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                Spacer()
+                trailing()
+            }
+            .settingsRow()
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Backup
@@ -192,25 +336,6 @@ struct SettingsView: View {
         Binding(get: { shareURL.map(ShareURL.init) }, set: { if $0 == nil { shareURL = nil } })
     }
 
-    // MARK: - Rows
-
-    private func valueRow(title: String, subtitle: String, value: String, onTap: @escaping () -> Void) -> some View {
-        Button(action: {
-            HapticsController.play(appModel.haptics.settings)
-            onTap()
-        }) {
-            HStack {
-                VStack(alignment: .leading) {
-                    Text(title).foregroundStyle(.primary)
-                    Text(subtitle).font(.caption).foregroundStyle(.secondary)
-                }
-                Spacer()
-                Text(value).bold()
-                Image(systemName: "chevron_right").font(.caption).foregroundStyle(.secondary)
-            }
-        }
-    }
-
     private static func patternLabel(_ pattern: HapticPattern) -> String {
         switch pattern {
         case .single: Keys.hapticSingle
@@ -224,6 +349,14 @@ struct SettingsView: View {
         let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0"
         let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "1"
         return "OvertimeOverview v\(version) (\(build))"
+    }
+}
+
+extension View {
+    /// Horizontal breathing room for a row inside a settings card.
+    fileprivate func settingsRow() -> some View {
+        padding(.horizontal, 18)
+            .padding(.vertical, 12)
     }
 }
 
@@ -283,4 +416,17 @@ private struct DurationPickerSheet: View {
             )!
         }
     }
+}
+// MARK: - Previews
+
+#Preview("Settings") {
+    SettingsView()
+        .environment(previewAppModel(seed: .empty))
+        .preferredColorScheme(.dark)
+}
+
+#Preview("Settings — light") {
+    SettingsView()
+        .environment(previewAppModel(seed: .empty))
+        .preferredColorScheme(.light)
 }

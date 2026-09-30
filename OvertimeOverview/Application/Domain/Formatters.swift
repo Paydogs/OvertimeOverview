@@ -32,6 +32,18 @@ enum Formatters {
         return formatter
     }()
 
+    private static let longWeekdayDayFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.setLocalizedDateFormatFromTemplate("EEEE, MMM d")
+        return formatter
+    }()
+
+    private static let weekdayFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.setLocalizedDateFormatFromTemplate("EEEE")
+        return formatter
+    }()
+
     private static let dateTimeFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
@@ -48,6 +60,8 @@ enum Formatters {
     static func clockWithSeconds(_ date: Date) -> String { clockWithSecondsFormatter.string(from: date) }
     static func month(_ date: Date) -> String { monthFormatter.string(from: date) }
     static func weekdayDay(_ date: Date) -> String { weekdayDayFormatter.string(from: date) }
+    static func longWeekdayDay(_ date: Date) -> String { longWeekdayDayFormatter.string(from: date) }
+    static func weekday(_ date: Date) -> String { weekdayFormatter.string(from: date) }
     static func dateTime(_ date: Date) -> String { dateTimeFormatter.string(from: date) }
     static func exportStamp(_ date: Date) -> String { exportStampFormatter.string(from: date) }
 

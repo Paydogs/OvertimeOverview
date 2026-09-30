@@ -46,6 +46,12 @@ final class WorktimeViewModel {
         await refresh()
     }
 
+    /// Manual session entry from the Today screen's + button.
+    func add(start: Date, end: Date) async {
+        try? await store.insertSession(start: start, end: end)
+        await refresh()
+    }
+
     /// Sessions that started today, newest first.
     func todaysSessions(now: Date = Date()) -> [WorkSession] {
         WorktimeMath.todaysSessions(days.flatMap(\.sessions), now: now, calendar: .current)

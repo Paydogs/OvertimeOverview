@@ -21,6 +21,8 @@
 "status_notAtOffice" = "Nem vagy az irodában";
 "finish_finishes" = "A munkanap %1$@-kor ér véget";
 "finish_finished" = "A munkanap %1$@-kor véget ért";
+/* Projected end time on the progress bar's right edge */
+"today_expectedFinish" = "≈ %@";
 "button_clockIn" = "Érkezés";
 "button_clockBackIn" = "Visszaérkezés";
 "button_break" = "Távozás szünetre";
@@ -31,6 +33,16 @@
 "picker_clockIn" = "Érkezés időpontja";
 "picker_breakOut" = "Távozás időpontja (szünet)";
 "picker_endOfDay" = "Távozás időpontja (nap zárása)";
+"today_elapsed" = "Eltelt";
+"today_inSince" = "Bent %@ óta";
+"today_leaveApprox" = "Távozás ≈ %@";
+"today_inOffice" = "Irodában";
+"today_lunch" = "Ebéd";
+"today_sessions" = "Bejegyzések";
+"today_editHint" = "Idők módosítása koppintással";
+"session_active" = "Aktív bejegyzés";
+"add_title" = "Bejegyzés hozzáadása";
+"add_error" = "A befejezés a kezdés után kell legyen";
 "common_ok" = "OK";
 "common_cancel" = "Mégse";
 
@@ -47,6 +59,7 @@
 "history_empty" = "Még nincsenek korábbi napok.";
 "history_monthWorktime" = "Munkaidő %@";
 "history_monthOvertime" = "Túlóra %@";
+"history_monthOvertimeLabel" = "Túlóra";
 "history_monthUndertime" = "Hiány %@";
 "history_inOfficeSessions" = "Irodában %1$@ · %2$d bejegyzés";
 "history_noSessions" = "Nincs bejegyzés.";
@@ -61,6 +74,7 @@
 "settings_haptics" = "Rezgés";
 "settings_hapticsSubtitle" = "Reakció a gombok megérintésére";
 "settings_hapticStrength" = "Erősség: %d%%";
+"settings_hapticStrengthLabel" = "Erősség";
 "settings_hapticPattern" = "Minta";
 "haptic_single" = "Egyszer";
 "haptic_double" = "Dupla";
@@ -76,3 +90,19 @@
 "backup_imported" = "%d bejegyzés importálva";
 "backup_failed" = "A mentési fájl nem olvasható";
 "backup_exportFailed" = "A mentési fájl nem hozható létre";
+
+"widget_name" = "Munkaidő";
+"widget_inSince" = "Bent %1$@ óta";
+"widget_done" = "Mára kész";
+"widget_notClockedIn" = "Nincs bejelentkezve";
+"widget_clockIn" = "Érkezés";
+"widget_clockOut" = "Távozás";
+"widget_description" = "Érkezés, távozás vagy a Munkaidő képernyő megnyitása";
+
+/* Keys needed by Formatters (compiled into the widget via Domain) */
+"format_hoursMinutes" = "%1$dh %2$dm";
+"format_minutes" = "%d min";
+
+/* Keys needed by Localization (compiled into the widget for Keys.tr) */
+"language_code_en" = "English";
+"language_code_hu" = "Hungarian";

@@ -24,6 +24,8 @@
 "status_notAtOffice" = "Not at the office";
 "finish_finishes" = "Workday finishes at %@";
 "finish_finished" = "Workday finished at %@";
+/* Projected end time on the progress bar's right edge */
+"today_expectedFinish" = "≈ %@";
 "button_clockIn" = "Clock in";
 "button_clockBackIn" = "Clock back in";
 "button_break" = "Clock out for a break";
@@ -34,6 +36,16 @@
 "picker_clockIn" = "Clock-in time";
 "picker_breakOut" = "Clock-out time (break)";
 "picker_endOfDay" = "Clock-out time (end of day)";
+"today_elapsed" = "Elapsed";
+"today_inSince" = "In since %@";
+"today_leaveApprox" = "Leave ≈ %@";
+"today_inOffice" = "In office";
+"today_lunch" = "Lunch";
+"today_sessions" = "Sessions";
+"today_editHint" = "Tap to edit times";
+"session_active" = "Active session";
+"add_title" = "Add session";
+"add_error" = "The end must be after the start";
 "common_ok" = "OK";
 "common_cancel" = "Cancel";
 
@@ -50,6 +62,7 @@
 "history_empty" = "No previous days yet.";
 "history_monthWorktime" = "Worktime %@";
 "history_monthOvertime" = "Overtime %@";
+"history_monthOvertimeLabel" = "Overtime";
 "history_monthUndertime" = "Undertime %@";
 "history_inOfficeSessions" = "In office %1$@ · %2$d sessions";
 "history_noSessions" = "No sessions.";
@@ -64,6 +77,7 @@
 "settings_haptics" = "Haptics";
 "settings_hapticsSubtitle" = "Haptic feedback on button taps";
 "settings_hapticStrength" = "Strength: %d%%";
+"settings_hapticStrengthLabel" = "Strength";
 "settings_hapticPattern" = "Pattern";
 "haptic_single" = "Single";
 "haptic_double" = "Double";
@@ -79,3 +93,20 @@
 "backup_imported" = "Imported %d sessions";
 "backup_failed" = "Could not read the backup file";
 "backup_exportFailed" = "Could not create the backup file";
+
+
+"widget_name" = "Worktime";
+"widget_inSince" = "In since %@";
+"widget_done" = "Done for today";
+"widget_notClockedIn" = "Not clocked in";
+"widget_clockIn" = "Clock In";
+"widget_clockOut" = "Clock Out";
+"widget_description" = "Clock in or out, or open the Worktime screen";
+
+/* Keys needed by Formatters (compiled into the widget via Domain) */
+"format_hoursMinutes" = "%1$dh %2$dm";
+"format_minutes" = "%d min";
+
+/* Keys needed by Localization (compiled into the widget for Keys.tr) */
+"language_code_en" = "English";
+"language_code_hu" = "Hungarian";

@@ -15,7 +15,7 @@ struct OvertimeOverviewApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            MainView()
                 .environment(appModel)
         }
         .onChange(of: scenePhase) { _, phase in
