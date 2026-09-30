@@ -7,7 +7,6 @@ import SwiftUI
 
 struct HistoryView: View {
     @Environment(AppModel.self) private var appModel
-    @State private var expandedMonths: Set<Date> = []
     @State private var selectedDay: WorkDay?
 
     var body: some View {
@@ -15,7 +14,6 @@ struct HistoryView: View {
             HistoryContentView(
                 appModel: appModel,
                 now: timeline.date,
-                expandedMonths: $expandedMonths,
                 selectedDay: $selectedDay
             )
         }
@@ -29,20 +27,10 @@ struct HistoryView: View {
 private struct HistoryContentView: View {
     let appModel: AppModel
     let now: Date
-    @Binding var expandedMonths: Set<Date>
     @Binding var selectedDay: WorkDay?
 
     var body: some View {
-        let settings = appModel.settings
-        let calendar = Calendar.current
-        let candidates = WorktimeMath.historyCandidates(
-            days: appModel.viewModel.days,
-            now: now,
-            dayEnded: settings.endedToday(now: now),
-            calendar: calendar
-        )
-        let months = WorktimeMath.groupByMonth(candidates, calendar: calendar)
-
+        let months = appModel.history.months(now: now)
         ScrollView {
             VStack(spacing: 16) {
                 ScreenHeader(title: Keys.tabHistory)
@@ -58,74 +46,47 @@ private struct HistoryContentView: View {
                     MonthSection(
                         month: month,
                         now: now,
-                        lunch: settings.lunchSeconds,
-                        work: settings.workSeconds,
-                        isExpanded: expandedMonths.contains(month.monthStart),
-                        toggle: {
-                            if expandedMonths.contains(month.monthStart) {
-                                expandedMonths.remove(month.monthStart)
-                            } else {
-                                expandedMonths.insert(month.monthStart)
-                            }
-                        },
+                        appModel: appModel,
                         onSelectDay: { selectedDay = $0 }
                     )
                 }
             }
             .padding(.horizontal, 16)
         }
-        .appBackdrop()
+        .contentMargins(.bottom, 24)
+        .appBackdrop(.history)
         .onAppear {
-            // Only the newest month is expanded by default.
-            if expandedMonths.isEmpty, let first = months.first {
-                expandedMonths = [first.monthStart]
-            }
+            appModel.history.prepareInitialExpanded(months)
         }
     }
 }
 
 private struct MonthSection: View {
-    let month: (monthStart: Date, days: [WorkDay])
+    let month: HistoryViewModel.MonthSummary
     let now: Date
-    let lunch: TimeInterval
-    let work: TimeInterval
-    let isExpanded: Bool
-    let toggle: () -> Void
+    let appModel: AppModel
     let onSelectDay: (WorkDay) -> Void
 
     var body: some View {
-        VStack(spacing: 10) {
-            Button(action: toggle) { summaryCard }
-                .buttonStyle(.plain)
+        let isExpanded = appModel.history.expandedMonths.contains(month.monthStart)
+        return VStack(spacing: 10) {
+            Button(action: { appModel.history.toggle(month: month.monthStart) }) {
+                summaryCard
+            }
+            .buttonStyle(.plain)
             if isExpanded {
                 dayCard
             }
         }
     }
 
-    private var monthNet: TimeInterval {
-        month.days.reduce(0) {
-            $0 + WorktimeMath.netWorktime(presence: $1.inOffice(now: now), lunch: lunch)
-        }
-    }
-
-    private var monthOvertime: TimeInterval {
-        WorktimeMath.monthOvertime(
-            netPerDay: month.days.map {
-                WorktimeMath.netWorktime(presence: $0.inOffice(now: now), lunch: lunch)
-            },
-            workPerDay: work
-        )
-    }
-
     private var summaryCard: some View {
-        let overtime = monthOvertime
-        return VStack(alignment: .leading, spacing: 18) {
+        VStack(alignment: .leading, spacing: 18) {
             HStack(spacing: 8) {
                 Image(systemName: "chevron_right")
                     .font(.body.weight(.semibold))
                     .foregroundStyle(Theme.monthTextSecondary)
-                    .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                    .rotationEffect(.degrees(appModel.history.expandedMonths.contains(month.monthStart) ? 90 : 0))
                 Text(Formatters.month(month.monthStart))
                     .font(.headline)
                     .foregroundStyle(Theme.monthText)
@@ -134,7 +95,7 @@ private struct MonthSection: View {
             .padding(.horizontal, 20)
 
             HStack(alignment: .top, spacing: 0) {
-                summaryColumn(caption: Keys.worktimeTitle, value: Formatters.duration(monthNet))
+                summaryColumn(caption: Keys.worktimeTitle, value: Formatters.duration(month.worktime))
                 Spacer()
                 RoundedRectangle(cornerRadius: 1)
                     .fill(Theme.monthText.opacity(0.22))
@@ -142,15 +103,15 @@ private struct MonthSection: View {
                 Spacer()
                 summaryColumn(
                     caption: Keys.historyMonthOvertimeLabel,
-                    value: Formatters.duration(overtime),
-                    valueColor: overtime > 0 ? Theme.monthOvertime : Theme.undertime
+                    value: Formatters.duration(month.overtime),
+                    valueColor: month.overtime > 0 ? Theme.monthOvertime : Theme.negativeText
                 )
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 24)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .monthSurface(cornerRadius: 26)
+        .monthSurface(cornerRadius: 30)
         .contentShape(Rectangle())
     }
 
@@ -175,40 +136,34 @@ private struct MonthSection: View {
             ForEach(Array(month.days.enumerated()), id: \.element.id) { index, day in
                 DayRow(
                     day: day,
-                    now: now,
-                    lunch: lunch,
-                    work: work,
+                    summary: appModel.history.summary(for: day, now: now),
                     showsDivider: index > 0,
+                    highlightChip: index == 0,
                     onSelect: { onSelectDay(day) }
                 )
             }
         }
-        .cardSurface(cornerRadius: 22)
+        .cardSurface(cornerRadius: 26)
     }
 }
 
 private struct DayRow: View {
     let day: WorkDay
-    let now: Date
-    let lunch: TimeInterval
-    let work: TimeInterval
+    let summary: HistoryViewModel.DaySummary
     let showsDivider: Bool
+    var highlightChip = false
     let onSelect: () -> Void
 
     var body: some View {
-        let inOffice = day.inOffice(now: now)
-        let net = WorktimeMath.netWorktime(presence: inOffice, lunch: lunch)
-        let overtime = net - work
-
-        return Button(action: onSelect) {
+        Button(action: onSelect) {
             HStack(spacing: 14) {
-                DayChip(date: day.dayStart)
+                DayChip(date: day.dayStart, highlight: highlightChip)
                 VStack(alignment: .leading, spacing: 3) {
                     Text(Formatters.weekday(day.dayStart))
                         .font(.body)
                         .foregroundStyle(.primary)
                     Text(Keys.historyInOfficeSessions(
-                        Formatters.duration(inOffice),
+                        Formatters.duration(summary.inOffice),
                         day.sessions.count
                     ))
                     .font(.footnote)
@@ -218,15 +173,15 @@ private struct DayRow: View {
                 }
                 Spacer()
                 VStack(alignment: .trailing, spacing: 3) {
-                    Text(Formatters.duration(net))
+                    Text(Formatters.duration(summary.net))
                         .font(.body.bold())
                         .monospacedDigit()
                         .foregroundStyle(.primary)
-                    if overtime != 0 {
-                        Text(Formatters.shortDuration(overtime))
+                    if summary.overtime != 0 {
+                        Text(Formatters.shortDuration(summary.overtime))
                             .font(.footnote.bold())
                             .monospacedDigit()
-                            .foregroundStyle(overtime > 0 ? Theme.overtime : Theme.undertime)
+                            .foregroundStyle(summary.overtime > 0 ? Theme.overtimeText : Theme.negativeText)
                     }
                 }
             }
@@ -238,7 +193,7 @@ private struct DayRow: View {
         .overlay(alignment: .top) {
             if showsDivider {
                 Rectangle()
-                    .fill(Theme.cardStroke)
+                    .fill(Theme.separator)
                     .frame(height: 1)
             }
         }
@@ -287,4 +242,26 @@ private struct DaySessionsSheet: View {
     HistoryView()
         .environment(previewAppModel(seed: .history))
         .preferredColorScheme(.light)
+}
+
+#Preview("Day sessions sheet") {
+    DaySessionsSheet(
+        day: WorkDay(
+            dayStart: .now,
+            sessions: [
+                WorkSession(
+                    id: UUID(),
+                    start: .now.addingTimeInterval(-4 * 3600),
+                    end: .now.addingTimeInterval(-2.5 * 3600)
+                ),
+                WorkSession(
+                    id: UUID(),
+                    start: .now.addingTimeInterval(-2 * 3600),
+                    end: nil
+                ),
+            ]
+        ),
+        now: .now
+    )
+    .preferredColorScheme(.dark)
 }

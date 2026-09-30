@@ -59,6 +59,8 @@
 "picker_start" = "Start time";
 "picker_end" = "End time";
 
+"picker_day" = "Day";
+
 "history_empty" = "No previous days yet.";
 "history_monthWorktime" = "Worktime %@";
 "history_monthOvertime" = "Overtime %@";
@@ -85,6 +87,8 @@
 "haptic_long" = "Long";
 "settings_testHaptics" = "Test haptics";
 "settings_backup" = "Backup";
+"settings_icloudSync" = "iCloud sync";
+"settings_icloudSyncSubtitle" = "Sync sessions across your devices — applied at next launch";
 "settings_export" = "Export backup";
 "settings_import" = "Import backup";
 "backup_importQuestion" = "Replace all sessions or merge with existing?";
@@ -93,20 +97,3 @@
 "backup_imported" = "Imported %d sessions";
 "backup_failed" = "Could not read the backup file";
 "backup_exportFailed" = "Could not create the backup file";
-
-
-"widget_name" = "Worktime";
-"widget_inSince" = "In since %@";
-"widget_done" = "Done for today";
-"widget_notClockedIn" = "Not clocked in";
-"widget_clockIn" = "Clock In";
-"widget_clockOut" = "Clock Out";
-"widget_description" = "Clock in or out, or open the Worktime screen";
-
-/* Keys needed by Formatters (compiled into the widget via Domain) */
-"format_hoursMinutes" = "%1$dh %2$dm";
-"format_minutes" = "%d min";
-
-/* Keys needed by Localization (compiled into the widget for Keys.tr) */
-"language_code_en" = "English";
-"language_code_hu" = "Hungarian";

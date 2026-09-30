@@ -56,6 +56,8 @@
 "picker_start" = "Kezdés időpontja";
 "picker_end" = "Befejezés időpontja";
 
+"picker_day" = "Nap";
+
 "history_empty" = "Még nincsenek korábbi napok.";
 "history_monthWorktime" = "Munkaidő %@";
 "history_monthOvertime" = "Túlóra %@";
@@ -82,6 +84,8 @@
 "haptic_long" = "Hosszú";
 "settings_testHaptics" = "Rezgés tesztelése";
 "settings_backup" = "Biztonsági mentés";
+"settings_icloudSync" = "iCloud szinkronizálás";
+"settings_icloudSyncSubtitle" = "Bejegyzések szinkronizálása eszközeid között — indítás után érvényesül";
 "settings_export" = "Mentés exportálása";
 "settings_import" = "Mentés importálása";
 "backup_importQuestion" = "Cseréled az összes bejegyzést, vagy egyesítsed a meglévőkkel?";
@@ -90,19 +94,3 @@
 "backup_imported" = "%d bejegyzés importálva";
 "backup_failed" = "A mentési fájl nem olvasható";
 "backup_exportFailed" = "A mentési fájl nem hozható létre";
-
-"widget_name" = "Munkaidő";
-"widget_inSince" = "Bent %1$@ óta";
-"widget_done" = "Mára kész";
-"widget_notClockedIn" = "Nincs bejelentkezve";
-"widget_clockIn" = "Érkezés";
-"widget_clockOut" = "Távozás";
-"widget_description" = "Érkezés, távozás vagy a Munkaidő képernyő megnyitása";
-
-/* Keys needed by Formatters (compiled into the widget via Domain) */
-"format_hoursMinutes" = "%1$dh %2$dm";
-"format_minutes" = "%d min";
-
-/* Keys needed by Localization (compiled into the widget for Keys.tr) */
-"language_code_en" = "English";
-"language_code_hu" = "Hungarian";

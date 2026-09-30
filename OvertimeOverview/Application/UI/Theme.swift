@@ -9,14 +9,16 @@ import SwiftUI
 import UIKit
 #endif
 
-/// App-wide palette. Every semantic color is adaptive, so the same views render
-/// both the midnight design (dark) and its light companion without separate layouts.
+/// App-wide palette, matching worktime-redesign-handoff/ios/design-tokens.json.
+/// Every semantic color is adaptive, so the same views render both appearances.
 enum Theme {
+    #if canImport(UIKit)
     private static func adaptive(_ light: UIColor, _ dark: UIColor) -> Color {
         Color(UIColor { traits in
             traits.userInterfaceStyle == .dark ? dark : light
         })
     }
+    #endif
 
     private static func rgb(_ hex: UInt32, alpha: CGFloat = 1) -> UIColor {
         UIColor(
@@ -27,112 +29,93 @@ enum Theme {
         )
     }
 
-    static let white = adaptive(
-        .init(red: 1, green: 1, blue: 1, alpha: 1),
-        .init(red: 1, green: 1, blue: 1, alpha: 1)
-    )
-    static let black = adaptive(
-        .init(red: 0.11, green: 0.11, blue: 0.16, alpha: 1),
-        .init(red: 1, green: 1, blue: 1, alpha: 1)
-    )
-    static let secondaryText = adaptive(
-        .init(red: 0.42, green: 0.40, blue: 0.48, alpha: 1),
-        .init(red: 1, green: 1, blue: 1, alpha: 0.62)
-    )
+    static let primaryText = adaptive(rgb(0x14112A), .white)
+    static let secondaryText = adaptive(rgb(0x5E5B6E), rgb(0xEBEBF5, alpha: 0.60))
+    static let tertiaryText = adaptive(rgb(0x3C3C43, alpha: 0.35), rgb(0xEBEBF5, alpha: 0.35))
 
-    // Backdrop: faint lavender wash in light, near-black indigo in dark.
-    static let bgTop = adaptive(rgb(0xF5F3FB), rgb(0x0B0B16))
-    static let bgBottom = adaptive(rgb(0xE7E1F6), rgb(0x161432))
+    // Backdrop: navy → plum in dark; lavender wash in light.
+    static let bgTop = adaptive(rgb(0xF6F5FB), rgb(0x090D20))
+    static let bgMid = adaptive(rgb(0xEFEBF9), rgb(0x140F2C))
+    static let bgBottom = adaptive(rgb(0xEAE4F7), rgb(0x190F30))
+    static let backgroundGlow = adaptive(
+        rgb(0x8954E7, alpha: 0.16),
+        rgb(0x8954E7, alpha: 0.28)
+    )
+    static let settingsGlow = adaptive(
+        rgb(0x0A84FF, alpha: 0.12),
+        rgb(0x0A84FF, alpha: 0.18)
+    )
 
     // Card surfaces.
-    static let cardFill = adaptive(
-        .init(red: 1, green: 1, blue: 1, alpha: 1),
-        .init(red: 1, green: 1, blue: 1, alpha: 0.07)
+    static let surface = adaptive(
+        rgb(0xFFFFFF, alpha: 0.72),
+        rgb(0xFFFFFF, alpha: 0.07)
     )
-    static let cardFillStrong = adaptive(
-        .init(red: 1, green: 1, blue: 1, alpha: 1),
-        .init(red: 1, green: 1, blue: 1, alpha: 0.11)
+    static let surfaceStroke = adaptive(
+        rgb(0xFFFFFF, alpha: 0.95),
+        rgb(0xFFFFFF, alpha: 0.10)
     )
-    static let cardStroke = adaptive(
-        rgb(0x000000, alpha: 0.06),
-        rgb(0xFFFFFF, alpha: 0.12)
+    static let surfaceShadow = adaptive(
+        rgb(0x28145A, alpha: 0.07),
+        rgb(0x000000, alpha: 0.25)
     )
-    static let cardShadow = adaptive(
-        rgb(0x2E2750, alpha: 0.12),
-        rgb(0x000000, alpha: 0.0)
-    )
+    static let separator = adaptive(rgb(0x14112A, alpha: 0.08), rgb(0xFFFFFF, alpha: 0.08))
 
-    // Selected tab / interactive pill inside a card.
-    static let pillFill = adaptive(rgb(0x000000, alpha: 0.06), rgb(0xFFFFFF, alpha: 0.12))
+    static let accent = adaptive(rgb(0x0071E3), rgb(0x0A84FF))
+    static let accentFill = adaptive(rgb(0x0071E3, alpha: 0.10), rgb(0x0A84FF, alpha: 0.16))
 
-    static let accent = adaptive(rgb(0x2E6BE6), rgb(0x3081FA))
-    static let overtime = adaptive(rgb(0x7C46F0), rgb(0x9F7BF9))
-    static let undertime = adaptive(rgb(0xE2590D), rgb(0xFC8A57))
-    static let dotGreen = adaptive(rgb(0x2E9E56), rgb(0x30D158))
+    static let overtimeText = adaptive(rgb(0x7A3FE0), rgb(0xB48CFF))
+    static let overtimeFill = Color(rgb: 0x8954E7)
+    static let negativeText = adaptive(rgb(0xC4501E), rgb(0xFF8D54))
+    static let liveDot = adaptive(rgb(0x28B44C), rgb(0x30D158))
 
-    // Ring / circular progress.
-    static let track = adaptive(rgb(0x000000, alpha: 0.06), rgb(0xFFFFFF, alpha: 0.08))
-    static let ringGradient = LinearGradient(
-        colors: [accent, accent],
-        startPoint: .topTrailing, endPoint: .bottomLeading
-    )
+    // Ring.
+    static let ringTrack = adaptive(rgb(0x14112A, alpha: 0.07), rgb(0xFFFFFF, alpha: 0.08))
 
-    // Break (clock out for a break) button.
+    // Break (clock out for a break) button; the label is dark on coral because
+    // white fails contrast (handoff tokens: onBreak #2A0A0E).
+    static let breakLabel = Color(rgb: 0x2A0A0E)
     static let warm = LinearGradient(
-        colors: [Color(red: 0.97, green: 0.43, blue: 0.42),
-                 Color(red: 0.99, green: 0.58, blue: 0.32)],
+        colors: [Color(rgb: 0xFF6C69), Color(rgb: 0xFF8D54)],
         startPoint: .leading, endPoint: .trailing
     )
-    static let warmShadow = Color(red: 0.99, green: 0.48, blue: 0.30)
+    static let warmShadow = Color(rgb: 0xFF6C69)
 
     // Clock-in button.
     static let brand = LinearGradient(
-        colors: [adaptive(rgb(0x3F82F0), rgb(0x3F8AFB)),
-                 adaptive(rgb(0x2748C9), rgb(0x2C63E8))],
+        colors: [adaptive(rgb(0x2A94FF), rgb(0x2E99FF)),
+                 adaptive(rgb(0x0059CB), rgb(0x0A6FE0))],
         startPoint: .topLeading, endPoint: .bottomTrailing
     )
 
-    // Month summary card in History.
+    // History month summary card.
     static let monthGradient = LinearGradient(
-        colors: [adaptive(rgb(0xF9F7FD), rgb(0x6B51CF)),
-                 adaptive(rgb(0xF2EEFA), rgb(0x2A2059))],
+        colors: [adaptive(rgb(0xEDE6FB), rgb(0x6B51CF)),
+                 adaptive(rgb(0xF6F3FC), rgb(0x2A1B4D))],
         startPoint: .topLeading, endPoint: .bottomTrailing
     )
-    static let monthText = adaptive(rgb(0x14131C), rgb(0xFFFFFF))
-    static let monthTextSecondary = adaptive(rgb(0x5F5B70), rgb(0xFFFFFF, alpha: 0.65))
-    // Overtime sits on the tinted month card, so it needs its own reading.
-    static let monthOvertime = adaptive(rgb(0x7C3AED), rgb(0xAF93FD))
+    static let monthText = primaryText
+    static let monthTextSecondary = secondaryText
+    static let monthOvertime = overtimeText
 
     // Icon tiles (Settings rows) and small chips (History day badge).
-    static let tileBlue = LinearGradient(
-        colors: [adaptive(rgb(0x4C8BF0), rgb(0x398AFB)),
-                 adaptive(rgb(0x2A5FD1), rgb(0x2B5CE0))],
-        startPoint: .topLeading, endPoint: .bottomTrailing
-    )
-    static let tileOrange = LinearGradient(
-        colors: [Color(red: 0.99, green: 0.60, blue: 0.33),
-                 Color(red: 0.93, green: 0.47, blue: 0.17)],
-        startPoint: .topLeading, endPoint: .bottomTrailing
-    )
-    static let tilePurple = LinearGradient(
-        colors: [adaptive(rgb(0x9B6CF5), rgb(0xA581FB)),
-                 adaptive(rgb(0x6C28D9), rgb(0x7138E8))],
-        startPoint: .topLeading, endPoint: .bottomTrailing
-    )
-    static let tileGreen = LinearGradient(
-        colors: [Color(red: 0.39, green: 0.83, blue: 0.52),
-                 Color(red: 0.15, green: 0.73, blue: 0.34)],
-        startPoint: .topLeading, endPoint: .bottomTrailing
-    )
-    static let tileGray = LinearGradient(
-        colors: [adaptive(rgb(0x9C99A6), rgb(0x8D8A98)),
-                 adaptive(rgb(0x837F8E), rgb(0x6E6A7C))],
-        startPoint: .topLeading, endPoint: .bottomTrailing
+    static let tileBlue = Color(rgb: 0x0A84FF)
+    static let tileOrange = Color(rgb: 0xFF8D54)
+    static let tilePurple = Color(rgb: 0x8954E7)
+    static let tileGreen = adaptive(rgb(0x34C759), rgb(0x30D158))
+    static let tileGray = adaptive(rgb(0x8E8E93), rgb(0x636366))
+    static let chipFill = adaptive(
+        rgb(0x000000, alpha: 0.05),
+        rgb(0xFFFFFF, alpha: 0.08)
     )
     static let chipOvertimeFill = adaptive(
-        rgb(0x7C46F0, alpha: 0.10),
-        rgb(0xFFFFFF, alpha: 0.10)
+        rgb(0x8954E7, alpha: 0.12),
+        rgb(0x8954E7, alpha: 0.22)
     )
+}
+
+enum BackdropStyle {
+    case today, history, settings
 }
 
 // MARK: - Surfaces
@@ -142,12 +125,12 @@ extension View {
     func cardSurface(cornerRadius: CGFloat = 22) -> some View {
         background {
             RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                .fill(Theme.cardFill)
-                .shadow(color: Theme.cardShadow, radius: 18, y: 10)
+                .fill(Theme.surface)
+                .shadow(color: Theme.surfaceShadow, radius: 18, y: 8)
         }
         .overlay {
             RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                .strokeBorder(Theme.cardStroke, lineWidth: 1)
+                .strokeBorder(Theme.surfaceStroke, lineWidth: 1)
         }
     }
 
@@ -155,59 +138,83 @@ extension View {
     func heroSurface(cornerRadius: CGFloat = 28) -> some View {
         background {
             RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                .fill(Theme.cardFillStrong)
-                .shadow(color: Theme.cardShadow, radius: 18, y: 10)
+                .fill(Theme.chipFill)
+                .shadow(color: Theme.surfaceShadow, radius: 18, y: 8)
         }
         .overlay {
             RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                .strokeBorder(Theme.cardStroke, lineWidth: 1)
+                .strokeBorder(Theme.surfaceStroke, lineWidth: 1)
         }
     }
 
     /// History's month summary card.
-    func monthSurface(cornerRadius: CGFloat = 24) -> some View {
+    func monthSurface(cornerRadius: CGFloat = 30) -> some View {
         background {
             RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                 .fill(Theme.monthGradient)
-                .shadow(color: Theme.cardShadow, radius: 18, y: 10)
+                .shadow(color: Theme.surfaceShadow, radius: 24, y: 10)
         }
         .overlay {
             RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                .strokeBorder(Theme.cardStroke, lineWidth: 1)
+                .strokeBorder(Theme.surfaceStroke, lineWidth: 1)
         }
     }
 
-    /// Floating capsule surface for secondary buttons and the tab bar.
+    /// Floating capsule surface for secondary buttons.
     func capsuleSurface() -> some View {
         background {
             Capsule()
-                .fill(Theme.cardFill)
-                .shadow(color: Theme.cardShadow, radius: 18, y: 10)
+                .fill(Theme.surface)
+                .shadow(color: Theme.surfaceShadow, radius: 18, y: 8)
         }
         .overlay {
-            Capsule().strokeBorder(Theme.cardStroke, lineWidth: 1)
+            Capsule().strokeBorder(Theme.surfaceStroke, lineWidth: 1)
         }
     }
 
     /// Small pill status bubble.
     func pillSurface() -> some View {
         background {
-            Capsule().fill(Theme.cardFill)
+            Capsule().fill(Theme.surface)
         }
         .overlay {
-            Capsule().strokeBorder(Theme.cardStroke, lineWidth: 1)
+            Capsule().strokeBorder(Theme.surfaceStroke, lineWidth: 1)
         }
     }
 
-    /// Full-screen adaptive backdrop for a tab's content.
-    func appBackdrop() -> some View {
-        background(
-            LinearGradient(
-                colors: [Theme.bgTop, Theme.bgBottom],
-                startPoint: .top, endPoint: .bottom
-            )
+    /// Full-screen adaptive backdrop with the per-screen radial glow.
+    func appBackdrop(_ style: BackdropStyle = .today) -> some View {
+        background {
+            ZStack {
+                LinearGradient(
+                    colors: [Theme.bgTop, Theme.bgMid, Theme.bgBottom],
+                    startPoint: .top, endPoint: .bottom
+                )
+                RadialGradient(
+                    colors: [glow(style), .clear],
+                    center: glowCenter(style),
+                    startRadius: 0,
+                    endRadius: 420
+                )
+            }
             .ignoresSafeArea()
-        )
+        }
+    }
+
+    private func glow(_ style: BackdropStyle) -> Color {
+        switch style {
+        case .today: Theme.backgroundGlow
+        case .history: Theme.backgroundGlow
+        case .settings: Theme.settingsGlow
+        }
+    }
+
+    private func glowCenter(_ style: BackdropStyle) -> UnitPoint {
+        switch style {
+        case .today: UnitPoint(x: 0.5, y: 0.3)
+        case .history: UnitPoint(x: 0.8, y: 0.12)
+        case .settings: UnitPoint(x: 0.15, y: 0.10)
+        }
     }
 }
 

@@ -11,9 +11,6 @@ struct SettingsView: View {
     @State private var pickingWork = false
     @State private var pickingLunch = false
     @State private var importing = false
-    @State private var pendingImport: Data?
-    @State private var shareURL: URL?
-    @State private var alertMessage: String?
 
     var body: some View {
         ScrollView {
@@ -41,40 +38,99 @@ struct SettingsView: View {
             }
             .padding(.horizontal, 16)
         }
-        .appBackdrop()
-        .sheet(isPresented: $pickingWork) {
-            DurationPickerSheet(title: Keys.settingsPickWork, minutes: Int(appModel.settings.workSeconds / 60)) {
-                appModel.settings.updateWork(minutes: $0)
+        .contentMargins(.bottom, 24)
+        .appBackdrop(.settings)
+        .sheet(
+            isPresented: $pickingWork,
+            content: {
+                DurationPickerSheet(
+                    title: Keys.settingsPickWork,
+                    minutes: Int(appModel.settings.workSeconds / 60)
+                ) { appModel.settings.updateWork(minutes: $0) }
             }
-        }
-        .sheet(isPresented: $pickingLunch) {
-            DurationPickerSheet(title: Keys.settingsPickLunch, minutes: Int(appModel.settings.lunchSeconds / 60)) {
-                appModel.settings.updateLunch(minutes: $0)
+        )
+        .sheet(
+            isPresented: $pickingLunch,
+            content: {
+                DurationPickerSheet(
+                    title: Keys.settingsPickLunch,
+                    minutes: Int(appModel.settings.lunchSeconds / 60)
+                ) { appModel.settings.updateLunch(minutes: $0) }
             }
-        }
+        )
         .fileImporter(isPresented: $importing, allowedContentTypes: [.json]) { result in
-            if case .success(let url) = result { readImport(url) }
+            if case .success(let url) = result { appModel.preferences.readImport(at: url) }
         }
         .confirmationDialog(
             Keys.backupImportQuestion,
-            isPresented: Binding(
-                get: { pendingImport != nil },
-                set: { if !$0 { pendingImport = nil } }
-            )
+            isPresented: importBinding
         ) {
-            Button(Keys.backupReplace) { importBackup(replace: true) }
-            Button(Keys.backupMerge) { importBackup(replace: false) }
-            Button(Keys.commonCancel, role: .cancel) { pendingImport = nil }
+            Button(Keys.backupReplace) { appModel.preferences.importBackup(replace: true) }
+            Button(Keys.backupMerge) { appModel.preferences.importBackup(replace: false) }
+            Button(Keys.commonCancel, role: .cancel) { appModel.preferences.cancelImport() }
         }
-        .sheet(item: shareBinding) { item in
+        .sheet(item: shareItemBinding) { item in
             ShareSheet(url: item.url)
         }
         .alert(
             Keys.settingsBackup,
-            isPresented: Binding(get: { alertMessage != nil }, set: { if !$0 { alertMessage = nil } }),
-            presenting: alertMessage
+            isPresented: alertBinding,
+            presenting: appModel.preferences.alertMessage
         ) { _ in } message: { message in Text(message) }
     }
+
+    // MARK: - Bindings (thin wrappers over the view model)
+
+    private var importBinding: Binding<Bool> {
+        Binding(
+            get: { appModel.preferences.pendingImport != nil },
+            set: { if !$0 { appModel.preferences.cancelImport() } }
+        )
+    }
+
+    private var shareItemBinding: Binding<SettingsViewModel.ShareItem?> {
+        Binding(
+            get: { appModel.preferences.shareItem },
+            set: { if $0 == nil { appModel.preferences.dismissShare() } }
+        )
+    }
+
+    private var alertBinding: Binding<Bool> {
+        Binding(
+            get: { appModel.preferences.alertMessage != nil },
+            set: { if !$0 { appModel.preferences.dismissAlert() } }
+        )
+    }
+
+    private var hapticsEnabledBinding: Binding<Bool> {
+        Binding(
+            get: { appModel.haptics.settings.enabled },
+            set: { appModel.preferences.setHapticsEnabled($0) }
+        )
+    }
+
+    private var strengthBinding: Binding<Double> {
+        Binding(
+            get: { appModel.haptics.settings.strength },
+            set: { appModel.preferences.setHapticStrength($0) }
+        )
+    }
+
+    private var patternBinding: Binding<HapticPattern> {
+        Binding(
+            get: { appModel.haptics.settings.pattern },
+            set: { appModel.preferences.setHapticPattern($0) }
+        )
+    }
+
+    private var syncBinding: Binding<Bool> {
+        Binding(
+            get: { appModel.settings.iCloudSyncEnabled },
+            set: { appModel.preferences.setSyncEnabled($0) }
+        )
+    }
+
+    // MARK: - Rows (layout only; every value comes from the view models)
 
     private func sectionCaption(_ title: String) -> some View {
         Text(title)
@@ -86,7 +142,7 @@ struct SettingsView: View {
     private var worktimeCard: some View {
         VStack(spacing: 0) {
             rowButton(
-                icon: "clock",
+                icon: "clock.fill",
                 tileFill: Theme.tileBlue,
                 title: Keys.settingsWork,
                 subtitle: Keys.settingsWorkSubtitle
@@ -103,8 +159,6 @@ struct SettingsView: View {
                 subtitle: Keys.settingsLunchSubtitle
             ) {
                 ValuePill(text: Formatters.duration(appModel.settings.lunchSeconds))
-                    .lineLimit(2)
-                    .multilineTextAlignment(.trailing)
             } action: {
                 pickingLunch = true
             }
@@ -116,7 +170,7 @@ struct SettingsView: View {
         VStack(spacing: 0) {
             HStack(spacing: 14) {
                 IconTile(
-                    systemImage: "iphone.gen3.radiowaves.left.and.right",
+                    systemImage: "iphone.radiowaves.left.and.right",
                     fill: Theme.tilePurple
                 )
                 VStack(alignment: .leading, spacing: 1) {
@@ -127,7 +181,7 @@ struct SettingsView: View {
                         .foregroundStyle(Theme.secondaryText)
                 }
                 Spacer()
-                Toggle("", isOn: hapticsBinding)
+                Toggle("", isOn: hapticsEnabledBinding)
                     .labelsHidden()
             }
             .settingsRow()
@@ -140,7 +194,7 @@ struct SettingsView: View {
                     Spacer()
                     Picker("", selection: patternBinding) {
                         ForEach(HapticPattern.allCases, id: \.self) { pattern in
-                            Text(Self.patternLabel(pattern)).tag(pattern)
+                            Text(appModel.preferences.hapticPatternLabel(pattern)).tag(pattern)
                         }
                     }
                     .pickerStyle(.menu)
@@ -163,9 +217,7 @@ struct SettingsView: View {
                 .settingsRow()
 
                 rowDivider
-                Button {
-                    HapticsController.play(appModel.haptics.settings)
-                } label: {
+                Button(action: { appModel.preferences.testHaptics() }) {
                     Text(Keys.settingsTestHaptics)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .foregroundStyle(Theme.accent)
@@ -178,17 +230,31 @@ struct SettingsView: View {
 
     private var backupCard: some View {
         VStack(spacing: 0) {
+            HStack(spacing: 14) {
+                IconTile(systemImage: "cloud", fill: Theme.tileBlue)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(Keys.settingsIcloudSync)
+                        .foregroundStyle(.primary)
+                    Text(Keys.settingsIcloudSyncSubtitle)
+                        .font(.caption)
+                        .foregroundStyle(Theme.secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer()
+                Toggle("", isOn: syncBinding)
+                    .labelsHidden()
+            }
+            .settingsRow()
+            rowDivider
             rowButton(
                 icon: "square.and.arrow.up",
                 tileFill: Theme.tileGreen,
                 title: Keys.settingsExport,
                 subtitle: nil
             ) {
-                Image(systemName: "chevron_right")
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(Theme.secondaryText)
+                chevron
             } action: {
-                exportBackup()
+                appModel.preferences.exportBackup()
             }
             rowDivider
             rowButton(
@@ -197,9 +263,7 @@ struct SettingsView: View {
                 title: Keys.settingsImport,
                 subtitle: nil
             ) {
-                Image(systemName: "chevron_right")
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(Theme.secondaryText)
+                chevron
             } action: {
                 importing = true
             }
@@ -207,21 +271,21 @@ struct SettingsView: View {
         .cardSurface(cornerRadius: 22)
     }
 
-    private var strengthPercent: String {
-        "\(Int((appModel.haptics.settings.strength * 100).rounded()))%"
+    private var chevron: some View {
+        Image(systemName: "chevron_right")
+            .font(.footnote.weight(.semibold))
+            .foregroundStyle(Theme.secondaryText)
     }
-
-    // MARK: - Shared row scaffolding
 
     private var rowDivider: some View {
         Rectangle()
-            .fill(Theme.cardStroke)
+            .fill(Theme.separator)
             .frame(height: 1)
     }
 
     private func rowButton<Trailing: View>(
         icon: String,
-        tileFill: LinearGradient,
+        tileFill: Color,
         title: String,
         subtitle: String?,
         @ViewBuilder trailing: () -> Trailing,
@@ -252,97 +316,8 @@ struct SettingsView: View {
         .buttonStyle(.plain)
     }
 
-    // MARK: - Backup
-
-    private func exportBackup() {
-        guard let data = appModel.viewModel.exportBackup(settings: appModel.settings),
-              let url = try? Self.writeTempJSON(data)
-        else {
-            alertMessage = Keys.backupExportFailed
-            return
-        }
-        shareURL = url
-    }
-
-    private static func writeTempJSON(_ data: Data) throws -> URL {
-        let url = FileManager.default.temporaryDirectory
-            .appendingPathComponent("overtimeoverview-\(Formatters.exportStamp(Date())).json")
-        try data.write(to: url, options: .atomic)
-        return url
-    }
-
-    private func readImport(_ url: URL) {
-        guard url.startAccessingSecurityScopedResource(),
-              let data = try? Data(contentsOf: url)
-        else {
-            alertMessage = Keys.backupFailed
-            return
-        }
-        defer { url.stopAccessingSecurityScopedResource() }
-        pendingImport = data
-    }
-
-    private func importBackup(replace: Bool) {
-        guard let data = pendingImport else { return }
-        pendingImport = nil
-        Task {
-            if let count = await appModel.viewModel.importBackup(
-                data: data, replace: replace, settings: appModel.settings
-            ) {
-                alertMessage = Keys.backupImported(count)
-            } else {
-                alertMessage = Keys.backupFailed
-            }
-        }
-    }
-
-    // MARK: - Bindings
-
-    private var hapticsBinding: Binding<Bool> {
-        Binding(
-            get: { appModel.haptics.settings.enabled },
-            set: { newValue in
-                var settings = appModel.haptics.settings
-                settings.enabled = newValue
-                appModel.haptics.update(settings)
-                if newValue { HapticsController.play(settings) }
-            }
-        )
-    }
-
-    private var strengthBinding: Binding<Double> {
-        Binding(
-            get: { appModel.haptics.settings.strength },
-            set: { newValue in
-                var settings = appModel.haptics.settings
-                settings.strength = newValue
-                appModel.haptics.update(settings)
-            }
-        )
-    }
-
-    private var patternBinding: Binding<HapticPattern> {
-        Binding(
-            get: { appModel.haptics.settings.pattern },
-            set: { newValue in
-                var settings = appModel.haptics.settings
-                settings.pattern = newValue
-                appModel.haptics.update(settings)
-            }
-        )
-    }
-
-    private var shareBinding: Binding<ShareURL?> {
-        Binding(get: { shareURL.map(ShareURL.init) }, set: { if $0 == nil { shareURL = nil } })
-    }
-
-    private static func patternLabel(_ pattern: HapticPattern) -> String {
-        switch pattern {
-        case .single: Keys.hapticSingle
-        case .double: Keys.hapticDouble
-        case .triple: Keys.hapticTriple
-        case .long: Keys.hapticLong
-        }
+    private var strengthPercent: String {
+        "\(Int((appModel.haptics.settings.strength * 100).rounded()))%"
     }
 
     private static var versionFooter: String {
@@ -358,13 +333,6 @@ extension View {
         padding(.horizontal, 18)
             .padding(.vertical, 12)
     }
-}
-
-/// Wrapper so `.sheet(item:)` can present a URL.
-private struct ShareURL: Identifiable {
-    let url: URL
-    var id: String { url.absoluteString }
-    init(_ url: URL) { self.url = url }
 }
 
 /// UIKit share sheet for the exported file.
@@ -429,4 +397,9 @@ private struct DurationPickerSheet: View {
     SettingsView()
         .environment(previewAppModel(seed: .empty))
         .preferredColorScheme(.light)
+}
+
+#Preview("Duration picker sheet") {
+    DurationPickerSheet(title: "Work time", minutes: 450) { _ in }
+        .preferredColorScheme(.dark)
 }

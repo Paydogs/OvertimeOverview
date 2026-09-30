@@ -109,7 +109,8 @@ struct WorktimeMathTests {
 
     @Test func formatterShapes() {
         #expect(Formatters.elapsed(7 * 3600 + 32 * 60 + 10) == "7:32:10")
-        #expect(Formatters.duration(-(2 * 3600 + 5 * 60)).hasPrefix("-"))
+        // Negative durations use the typographic minus (U+2212), per the redesign tokens.
+        #expect(Formatters.duration(-(2 * 3600 + 5 * 60)).hasPrefix("−"))
         #expect(Formatters.shortDuration(25 * 60).contains("25"))
         #expect(Formatters.shortDuration(75 * 60).contains("h"))
     }

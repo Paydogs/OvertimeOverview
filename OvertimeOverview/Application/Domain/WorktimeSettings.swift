@@ -17,6 +17,8 @@ final class WorktimeSettings {
     static let workKey = "work_seconds"
     static let lunchKey = "lunch_seconds"
     static let endedKey = "ended_day_start"
+    /// iCloud sync preference — flipped in Settings, applied on next launch.
+    static let iCloudSyncKey = "icloud_sync_enabled"
     static let defaultWork: TimeInterval = 8 * 3600
     static let defaultLunch: TimeInterval = 30 * 60
 
@@ -24,6 +26,7 @@ final class WorktimeSettings {
     private(set) var workSeconds: TimeInterval
     private(set) var lunchSeconds: TimeInterval
     private(set) var endedDayStart: Date?
+    private(set) var iCloudSyncEnabled: Bool
 
     var officeTarget: TimeInterval { workSeconds + lunchSeconds }
 
@@ -32,6 +35,7 @@ final class WorktimeSettings {
         workSeconds = defaults.object(forKey: Self.workKey) as? Double ?? Self.defaultWork
         lunchSeconds = defaults.object(forKey: Self.lunchKey) as? Double ?? Self.defaultLunch
         endedDayStart = defaults.object(forKey: Self.endedKey) as? Date
+        iCloudSyncEnabled = defaults.bool(forKey: Self.iCloudSyncKey)
     }
 
     func updateWork(minutes: Int) {
@@ -54,6 +58,12 @@ final class WorktimeSettings {
     func clearEnded() {
         endedDayStart = nil
         defaults.removeObject(forKey: Self.endedKey)
+    }
+
+    /// Records the sync preference; the store picks it up at next launch.
+    func setSyncEnabled(_ newValue: Bool) {
+        iCloudSyncEnabled = newValue
+        defaults.set(newValue, forKey: Self.iCloudSyncKey)
     }
 
     func endedToday(now: Date = Date(), calendar: Calendar = .current) -> Bool {

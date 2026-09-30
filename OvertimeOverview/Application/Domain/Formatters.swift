@@ -71,11 +71,12 @@ enum Formatters {
         return String(format: "%d:%02d:%02d", totalSeconds / 3600, (totalSeconds % 3600) / 60, totalSeconds % 60)
     }
 
-    /// Whole-minute duration, e.g. "7h 32m", sign-prefixed when negative.
+    /// Whole-minute duration, e.g. "7h 32m", minus-prefixed when negative
+    /// (U+2212, not a hyphen — the handoff tokens demand the typographic minus).
     /// Deviation from the brief: the generated Keys accessors are parameterized
     /// functions (Keys.formatHoursMinutes(_:_:_)), not format strings.
     static func duration(_ interval: TimeInterval) -> String {
-        let sign = interval < 0 ? "-" : ""
+        let sign = interval < 0 ? "−" : ""
         let totalMinutes = Int(abs(interval) / 60)
         return sign + Keys.formatHoursMinutes(totalMinutes / 60, totalMinutes % 60)
     }
@@ -84,7 +85,7 @@ enum Formatters {
     static func shortDuration(_ interval: TimeInterval) -> String {
         let minutes = Int(abs(interval) / 60)
         guard minutes < 60 else { return duration(interval) }
-        let sign = interval < 0 ? "-" : ""
+        let sign = interval < 0 ? "−" : ""
         return sign + Keys.formatMinutes(minutes)
     }
 }

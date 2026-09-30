@@ -13,21 +13,51 @@ actor WorktimeStore {
     nonisolated static func makeModelContainer() throws -> ModelContainer {
         // App Group when the entitlement is present, otherwise a plain local store
         // (unit tests, previews).
-        if let groupURL = FileManager.default.containerURL(
+        guard let groupURL = FileManager.default.containerURL(
             forSecurityApplicationGroupIdentifier: appGroup
-        ) {
-            let configuration = ModelConfiguration(
-                url: groupURL.appendingPathComponent("worktime.sqlite")
-            )
-            return try ModelContainer(for: WorkSessionModel.self, configurations: configuration)
+        ) else {
+            return try ModelContainer(for: WorkSessionModel.self)
         }
-        return try ModelContainer(for: WorkSessionModel.self)
+        let storeURL = groupURL.appendingPathComponent("worktime.sqlite")
+        // iCloud sync is a user preference read at store creation; flipping it
+        // needs a relaunch, so failures here fall back to plain local sync.
+        let cloudKit: ModelConfiguration.CloudKitDatabase? = isCloudSyncEnabled(
+            defaults: UserDefaults(suiteName: appGroup) ?? .standard
+        )
+            ? .private(iCloudContainerID)
+            : .none
+
+        if let container = try? ModelContainer(for: WorkSessionModel.self, configurations: cloudKit.map {
+            ModelConfiguration(url: storeURL, cloudKitDatabase: $0)
+        } ?? ModelConfiguration(url: storeURL)) {
+            return container
+        }
+        // Missing or mismatched iCloud entitlement (simulator, CI) — retry locally
+        // instead of dropping to in-memory, which would lose all sessions.
+        return try ModelContainer(
+            for: WorkSessionModel.self,
+            configurations: ModelConfiguration(url: storeURL, cloudKitDatabase: .none)
+        )
+    }
+
+    /// The iCloud container this app syncs sessions to.
+    nonisolated static let iCloudContainerID = "iCloud.hu.paydogs.overtime"
+
+    /// Whether the store syncs sessions via iCloud — reads the synced-settings
+    /// preference from the App Group defaults.
+    nonisolated static func isCloudSyncEnabled(defaults: UserDefaults) -> Bool {
+        defaults.bool(forKey: WorktimeSettings.iCloudSyncKey)
     }
 
     nonisolated static func makeInMemoryContainer() throws -> ModelContainer {
+        // Explicitly opt out: automatic discovery would pick up the iCloud
+        // entitlement and demand CloudKit's schema rules from this store too.
         try ModelContainer(
             for: WorkSessionModel.self,
-            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+            configurations: ModelConfiguration(
+                isStoredInMemoryOnly: true,
+                cloudKitDatabase: .none
+            )
         )
     }
 

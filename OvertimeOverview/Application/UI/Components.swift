@@ -39,7 +39,7 @@ struct ScreenHeader<Trailing: View>: View {
     }
 }
 
-/// Small circular header action (the + and share buttons).
+/// Small circular header action (the + button).
 struct RoundIconButton: View {
     let systemImage: String
     let action: () -> Void
@@ -50,9 +50,9 @@ struct RoundIconButton: View {
                 .font(.system(size: 18, weight: .semibold))
                 .foregroundStyle(.primary)
                 .frame(width: 44, height: 44)
-                .background(Circle().fill(Theme.cardFill))
-                .overlay(Circle().strokeBorder(Theme.cardStroke, lineWidth: 1))
-                .background(Circle().fill(Theme.cardShadow).shadow(radius: 8, y: 4))
+                .background(Circle().fill(Theme.surface))
+                .overlay(Circle().strokeBorder(Theme.surfaceStroke, lineWidth: 1))
+                .background(Circle().fill(Theme.surfaceShadow).shadow(radius: 8, y: 4))
         }
         .buttonStyle(.plain)
         .contentShape(Circle())
@@ -68,30 +68,39 @@ struct StatTile: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(caption)
-                .font(.footnote)
+                .font(.footnote.weight(.semibold))
                 .foregroundStyle(Theme.secondaryText)
             Text(value)
-                .font(.title3.bold())
+                .font(.body.bold())
                 .monospacedDigit()
                 .foregroundStyle(valueColor)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
-        .cardSurface(cornerRadius: 18)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 14)
+        .cardSurface(cornerRadius: 20)
     }
 }
 
 /// Tinted rounded-rect icon badge used by Settings rows.
 struct IconTile: View {
     let systemImage: String
-    let fill: LinearGradient
+    let fill: AnyShapeStyle
+
+    init(systemImage: String, fill: some ShapeStyle) {
+        self.systemImage = systemImage
+        self.fill = AnyShapeStyle(fill)
+    }
 
     var body: some View {
         Image(systemName: systemImage)
-            .font(.system(size: 17, weight: .semibold))
+            .font(.system(size: 14, weight: .semibold))
             .foregroundStyle(.white)
-            .frame(width: 38, height: 38)
-            .background(fill, in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+            .frame(width: 30, height: 30)
+            .background {
+                RoundedRectangle(cornerRadius: 9, style: .continuous)
+                    .fill(fill)
+            }
     }
 }
 
@@ -101,38 +110,59 @@ struct ValuePill: View {
 
     var body: some View {
         Text(text)
-            .font(.body.bold())
+            .font(.body.weight(.semibold))
             .monospacedDigit()
             .foregroundStyle(Theme.accent)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 9)
-            .background(Theme.accent.opacity(0.12), in: Capsule())
+            .lineLimit(1)
+            .fixedSize()
+            .padding(.horizontal, 15)
+            .padding(.vertical, 7)
+            .background(Theme.accentFill, in: Capsule())
     }
 }
 
 /// Circular progress ring with the elapsed time inside.
 struct RingProgress: View {
     let progress: Double
+    var lineWidth: CGFloat = 14
 
     var body: some View {
         ZStack {
             Circle()
-                .stroke(Theme.track, style: StrokeStyle(lineWidth: 18, lineCap: .round))
+                .stroke(Theme.ringTrack, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
             Circle()
                 .trim(from: 0, to: max(0.02, min(1, progress)))
                 .stroke(
-                    Theme.ringGradient,
-                    style: StrokeStyle(lineWidth: 18, lineCap: .round)
+                    LinearGradient(
+                        colors: [Theme.overtimeFill, Theme.accent],
+                        startPoint: .topLeading, endPoint: .bottomTrailing
+                    ),
+                    style: StrokeStyle(lineWidth: lineWidth, lineCap: .round)
                 )
                 .rotationEffect(.degrees(-90))
-                .animation(.easeInOut(duration: 0.6), value: progress)
+                .animation(.smooth, value: progress)
         }
+    }
+}
+
+extension Double {
+    var clampedToUnitInterval: Double { max(0, min(1, self)) }
+}
+
+extension Color {
+    init(rgb hex: UInt32) {
+        self.init(
+            red: Double((hex >> 16) & 0xFF) / 255,
+            green: Double((hex >> 8) & 0xFF) / 255,
+            blue: Double(hex & 0xFF) / 255
+        )
     }
 }
 
 /// "MON / 28" style day badge on history rows.
 struct DayChip: View {
     let date: Date
+    var highlight = false
 
     private static let weekdayFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -150,14 +180,49 @@ struct DayChip: View {
         VStack(spacing: 0) {
             Text(Self.weekdayFormatter.string(from: date).uppercased())
                 .font(.system(size: 9, weight: .semibold))
-                .foregroundStyle(Theme.overtime)
+                .foregroundStyle(highlight ? Theme.overtimeText : Theme.secondaryText)
             Text(Self.dayNumberFormatter.string(from: date))
                 .font(.body.bold())
                 .monospacedDigit()
                 .foregroundStyle(.primary)
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
-        .background(Theme.chipOvertimeFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .frame(minWidth: 44)
+        .padding(.vertical, 6)
+        .background {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(highlight ? Theme.chipOvertimeFill : Theme.chipFill)
+        }
     }
+}
+
+// MARK: - Previews
+
+#Preview("Components") {
+    ScrollView {
+        VStack(alignment: .leading, spacing: 18) {
+            ScreenHeader(title: "Today", caption: "Wednesday, Sep 30") {
+                RoundIconButton(systemImage: "plus") {}
+            }
+
+            RingProgress(progress: 0.39, lineWidth: 14)
+                .frame(width: 232, height: 232)
+                .frame(maxWidth: .infinity)
+
+            HStack(spacing: 12) {
+                StatTile(caption: "Worktime", value: "1h 44m")
+                StatTile(caption: "In office", value: "2h 14m")
+                StatTile(caption: "Lunch", value: "−30m", valueColor: Theme.negativeText)
+            }
+
+            HStack(spacing: 16) {
+                DayChip(date: .now, highlight: true)
+                DayChip(date: .now.addingTimeInterval(-86400))
+                ValuePill(text: "8h 0m")
+                IconTile(systemImage: "clock.fill", fill: Theme.tileBlue)
+                IconTile(systemImage: "square.and.arrow.up", fill: Theme.tileGreen)
+            }
+        }
+        .padding(16)
+    }
+    .appBackdrop(.today)
 }

@@ -55,4 +55,19 @@ struct WorktimeSettingsTests {
         settings.clearEnded()
         #expect(settings.endedToday(calendar: Self.calendar) == false)
     }
+
+    @Test func syncPreferenceRoundTrips() {
+        let name = "WorktimeSettingsTests-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: name)!
+        defaults.removePersistentDomain(forName: name)
+        // Off by default; flipping persists for the store to read at next launch.
+        let settings = WorktimeSettings(defaults: defaults)
+        #expect(settings.iCloudSyncEnabled == false)
+        #expect(WorktimeStore.isCloudSyncEnabled(defaults: defaults) == false)
+        settings.setSyncEnabled(true)
+        #expect(settings.iCloudSyncEnabled == true)
+        #expect(WorktimeStore.isCloudSyncEnabled(defaults: defaults) == true)
+        settings.setSyncEnabled(false)
+        #expect(WorktimeStore.isCloudSyncEnabled(defaults: defaults) == false)
+    }
 }

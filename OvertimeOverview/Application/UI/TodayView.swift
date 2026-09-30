@@ -12,8 +12,7 @@ struct TodayView: View {
     /// Which punch the time-picker sheet is configuring; `now` is captured so
     /// the picked time keeps the real second of the tap moment.
     struct PunchTarget: Identifiable {
-        enum Kind { case clockIn, breakOut, endOfDay }
-        let kind: Kind
+        let kind: TodayViewModel.PunchKind
         let now: Date
         var id: String { "\(kind)" }
     }
@@ -39,16 +38,6 @@ private struct TodayContentView: View {
     @State private var showingAdd = false
 
     var body: some View {
-        let viewModel = appModel.viewModel
-        let settings = appModel.settings
-        let todays = viewModel.todaysSessions(now: now)
-        let presence = WorktimeMath.presence(todays, now: now)
-        let target = settings.officeTarget
-        let net = WorktimeMath.netWorktime(presence: presence, lunch: settings.lunchSeconds)
-        let open = viewModel.openSession
-        let dayEnded = settings.endedToday(now: now)
-        let status = WorktimeMath.status(todayPresence: presence, openSession: open, dayEnded: dayEnded)
-
         ScrollView {
             VStack(spacing: 22) {
                 ScreenHeader(title: Keys.tabToday, caption: Formatters.longWeekdayDay(now)) {
@@ -58,160 +47,177 @@ private struct TodayContentView: View {
                     }
                 }
 
-                heroTimer(presence: presence, target: target, open: open)
+                timeRing
 
-                statusPill(status: status, presence: presence, target: target)
+                if appModel.today.status(now: now) != .notAtOffice {
+                    statusPill
+                }
 
-                statTiles(presence: presence, net: net, lunch: settings.lunchSeconds)
+                statTiles
 
                 SessionSection(now: now, appModel: appModel)
 
-                actionButtons(open: open, presence: presence, dayEnded: dayEnded)
+                actionButtons()
             }
             .padding(.horizontal, 16)
         }
-        .appBackdrop()
+        .contentMargins(.bottom, 24)
+        .appBackdrop(.today)
         .sheet(isPresented: $showingAdd) {
             AddSessionSheet(appModel: appModel)
         }
     }
 
-    /// Circular day-progress ring; the elapsed time lives in its center.
-    private func heroTimer(presence: TimeInterval, target: TimeInterval, open: WorkSession?) -> some View {
-        let progress = target > 0 ? presence / target : 0
-        return RingProgress(progress: progress)
-            .frame(width: 288, height: 288)
+    private var timeRing: some View {
+        RingProgress(progress: appModel.today.ringProgress(now: now), lineWidth: 14)
+            .frame(width: 232, height: 232)
             .overlay {
-                VStack(spacing: 6) {
+                VStack(spacing: 2) {
                     Text(Keys.todayElapsed)
-                        .font(.callout)
+                        .font(.footnote.weight(.semibold))
                         .foregroundStyle(Theme.secondaryText)
-                    Text(Formatters.elapsed(presence))
+                    Text(Formatters.elapsed(appModel.today.presence(now: now)))
                         .font(DisplayFont.timer(46))
                         .monospacedDigit()
                         .minimumScaleFactor(0.4)
                         .lineLimit(1)
                         .foregroundStyle(.primary)
                     Text(Keys.todayNow(Formatters.clockWithSeconds(now)))
-                        .font(.callout)
+                        .font(.footnote)
                         .foregroundStyle(Theme.secondaryText)
                 }
-                .padding(.horizontal, 40)
+                .padding(.horizontal, 36)
             }
             .frame(maxWidth: .infinity)
     }
 
-    private func statusPill(
-        status: WorktimeMath.TodayStatus,
-        presence: TimeInterval,
-        target: TimeInterval
-    ) -> some View {
-        // When not at the office yet this is "if you clocked in now" — still a useful anchor.
-        let finish = WorktimeMath.projectedFinish(now: now, presence: presence, target: target)
+    private var statusPill: some View {
+        let today = appModel.today
+        let status = today.status(now: now)
         let dotColor: Color
-        let content: Text
+        let content: () -> Text
         switch status {
         case .atOffice(let since):
-            dotColor = Theme.dotGreen
-            content = Text(Keys.todayInSince(Formatters.clock(since))) + Text("  ·  ") + Text(Keys.todayLeaveApprox(Formatters.clock(finish)))
+            dotColor = Theme.liveDot
+            content = {
+                Text(Keys.todayInSince(Formatters.clock(since)))
+                    .foregroundStyle(.primary)
+                + Text("  ·  ").foregroundStyle(Theme.tertiaryText)
+                + Text(Keys.todayLeaveApprox(Formatters.clock(today.projectedFinish(now: now))))
+                    .foregroundStyle(Theme.secondaryText)
+            }
         case .doneForToday:
-            dotColor = Theme.dotGreen
-            content = Text(Keys.statusDone)
+            dotColor = Theme.liveDot
+            content = { Text(Keys.statusDone).foregroundStyle(.primary) }
         case .onBreak:
-            dotColor = Theme.undertime
-            content = Text(Keys.statusOnBreak)
+            dotColor = Theme.negativeText
+            content = { Text(Keys.statusOnBreak).foregroundStyle(.primary) }
         case .notAtOffice:
+            // Hidden before the office; unreachable.
             dotColor = Theme.secondaryText
-            content = Text(Keys.statusNotAtOffice)
+            content = { Text(Keys.statusNotAtOffice).foregroundStyle(.primary) }
         }
         return HStack(spacing: 10) {
-            Circle().fill(dotColor).frame(width: 9, height: 9)
-            content
+            Circle()
+                .fill(dotColor)
+                .frame(width: 8, height: 8)
+                .shadow(color: dotColor, radius: 3)
+            content()
                 .monospacedDigit()
-                .foregroundStyle(.primary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
         }
         .font(.subheadline)
         .padding(.horizontal, 18)
-        .padding(.vertical, 11)
+        .padding(.vertical, 9)
         .pillSurface()
         .frame(maxWidth: .infinity)
     }
 
-    private func statTiles(presence: TimeInterval, net: TimeInterval, lunch: TimeInterval) -> some View {
-        HStack(spacing: 12) {
-            StatTile(caption: Keys.worktimeTitle, value: Formatters.duration(net))
-            StatTile(caption: Keys.todayInOffice, value: Formatters.duration(presence))
+    private var statTiles: some View {
+        let today = appModel.today
+        return HStack(spacing: 12) {
+            StatTile(
+                caption: Keys.worktimeTitle,
+                value: Formatters.duration(today.netWorktime(now: now))
+            )
+            StatTile(
+                caption: Keys.todayInOffice,
+                value: Formatters.duration(today.presence(now: now))
+            )
             StatTile(
                 caption: Keys.todayLunch,
-                value: Formatters.duration(-lunch),
-                valueColor: lunch > 0 ? Theme.undertime : .primary
+                value: Formatters.duration(-today.settings.lunchSeconds),
+                valueColor: today.settings.lunchSeconds > 0 ? Theme.negativeText : .primary
             )
         }
     }
 
-    private func actionButtons(open: WorkSession?, presence: TimeInterval, dayEnded: Bool) -> some View {
-        VStack(spacing: 14) {
-            if open != nil {
-                Button {
-                    HapticsController.play(appModel.haptics.settings)
-                    punchTarget = .init(kind: .breakOut, now: now)
-                } label: {
-                    Label(Keys.buttonBreak, systemImage: "cup.and.saucer")
-                        .font(.headline)
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 17)
-                        .background(Theme.warm, in: Capsule())
-                        .shadow(color: Theme.warmShadow.opacity(0.45), radius: 14, y: 6)
-                }
-                Button {
-                    HapticsController.play(appModel.haptics.settings)
-                    punchTarget = .init(kind: .endOfDay, now: now)
-                } label: {
-                    Label(Keys.buttonEndOfDay, systemImage: "arrow.right.to.line")
-                        .font(.headline)
-                        .foregroundStyle(Theme.accent)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 17)
-                        .capsuleSurface()
-                }
-            } else {
-                Button {
-                    HapticsController.play(appModel.haptics.settings)
-                    punchTarget = .init(kind: .clockIn, now: now)
-                } label: {
-                    Text(WorktimeMath.clockInLabel(todayPresence: presence, dayEnded: dayEnded)
-                         ? Keys.buttonClockBackIn : Keys.buttonClockIn)
-                        .font(.headline)
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 17)
-                        .background(Theme.brand, in: Capsule())
-                        .shadow(color: Theme.accent.opacity(0.45), radius: 14, y: 6)
-                }
+    @ViewBuilder
+    private func actionButtons() -> some View {
+        if appModel.today.openSession != nil {
+            Button {
+                HapticsController.play(appModel.haptics.settings)
+                punchTarget = .init(kind: .breakOut, now: now)
+            } label: {
+                Label(Keys.buttonBreak, systemImage: "cup.and.saucer")
+                    .font(.headline)
+                    .foregroundStyle(Theme.breakLabel)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 17)
+                    .background(Theme.warm, in: Capsule())
+                    .shadow(color: Theme.warmShadow.opacity(0.35), radius: 30, y: 10)
+            }
+            Button {
+                HapticsController.play(appModel.haptics.settings)
+                punchTarget = .init(kind: .endOfDay, now: now)
+            } label: {
+                Label(Keys.buttonEndOfDay, systemImage: "arrow.right.to.line")
+                    .font(.headline)
+                    .foregroundStyle(Theme.accent)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 17)
+                    .capsuleSurface()
+            }
+        } else {
+            Button {
+                HapticsController.play(appModel.haptics.settings)
+                punchTarget = .init(kind: .clockIn, now: now)
+            } label: {
+                Text(appModel.today.clockInLabel(now: now))
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 17)
+                    .background(Theme.brand, in: Capsule())
+                    .shadow(color: Theme.accent.opacity(0.35), radius: 14, y: 6)
             }
         }
     }
 }
 
-/// Manual session entry from the header's + button.
+/// Manual session entry from the header's + button — day, start and end time,
+/// so previous days can be logged too. Overnight visits roll to the next day
+/// when the end time is earlier than the start time.
 struct AddSessionSheet: View {
     let appModel: AppModel
+    private let calendar = Calendar.current
     @Environment(\.dismiss) private var dismiss
+    @State private var day: Date = .now
     @State private var start: Date = .now
     @State private var end: Date = .now
 
     var body: some View {
         NavigationStack {
             List {
+                DatePicker(Keys.pickerDay, selection: $day)
+                    .datePickerStyle(.wheel)
                 DatePicker(Keys.pickerStart, selection: $start, displayedComponents: .hourAndMinute)
                 DatePicker(Keys.pickerEnd, selection: $end, displayedComponents: .hourAndMinute)
                 if !valid {
                     Text(Keys.addError)
                         .font(.footnote)
-                        .foregroundStyle(Theme.undertime)
+                        .foregroundStyle(Theme.negativeText)
                 }
             }
             .navigationTitle(Keys.addTitle)
@@ -230,19 +236,50 @@ struct AddSessionSheet: View {
         .onAppear(perform: seedTimes)
     }
 
-    private var valid: Bool { end > start }
+    private var valid: Bool { sameTime == false }
+
+    /// Same start and end means either a mistap or a zero-length entry — invalid.
+    private var sameTime: Bool {
+        hourMinute(of: start) == hourMinute(of: end)
+    }
+
+    /// The picked day merged with the Start wheel's time of day.
+    private var combinedStart: Date {
+        combine(day: day, with: start)
+    }
+
+    /// The picked day merged with the End wheel's time of day; earlier than the
+    /// start means the session crossed midnight.
+    private var combinedEnd: Date {
+        let end = combine(day: day, with: end)
+        guard end < combinedStart else { return end }
+        return calendar.date(byAdding: .day, value: 1, to: end) ?? end
+    }
+
+    private func hourMinute(of date: Date) -> (hour: Int, minute: Int) {
+        let components = calendar.dateComponents([.hour, .minute], from: date)
+        return (hour: components.hour ?? 0, minute: components.minute ?? 0)
+    }
+
+    private func combine(day pickedDay: Date, with wheel: Date) -> Date {
+        let comps = hourMinute(of: wheel)
+        var components = calendar.dateComponents([.year, .month, .day], from: pickedDay)
+        components.hour = comps.hour
+        components.minute = comps.minute
+        return calendar.date(from: components) ?? pickedDay
+    }
 
     private func seedTimes() {
-        let calendar = Calendar.current
-        let day = calendar.startOfDay(for: .now)
-        start = day.addingTimeInterval(9 * 3600)
-        end = day.addingTimeInterval(17 * 3600)
+        let today = calendar.startOfDay(for: .now)
+        day = today
+        start = today.addingTimeInterval(9 * 3600)
+        end = today.addingTimeInterval(17 * 3600)
     }
 
     private func confirm() {
         HapticsController.play(appModel.haptics.settings)
         Task {
-            await appModel.viewModel.add(start: start, end: end)
+            await appModel.today.add(start: combinedStart, end: combinedEnd)
             dismiss()
         }
     }
@@ -281,39 +318,9 @@ struct PunchTimePicker: View {
     }
 
     private func confirm() {
-        let calendar = Calendar.current
-        // Clock-out uses the open session's start day as the base day
-        // (MagniTools parity: a session can be closed on the day it started).
-        let baseDay: Date
-        if target.kind == .clockIn {
-            baseDay = calendar.startOfDay(for: target.now)
-        } else {
-            baseDay = calendar.startOfDay(for: appModel.viewModel.openSession?.start ?? target.now)
-        }
-        let components = calendar.dateComponents([.hour, .minute], from: pickerDate)
-        let date = WorktimeMath.punchDate(
-            onDay: baseDay,
-            hour: components.hour ?? 0,
-            minute: components.minute ?? 0,
-            second: calendar.component(.second, from: target.now),
-            calendar: calendar
-        )
-
+        HapticsController.play(appModel.haptics.settings)
         Task {
-            let viewModel = appModel.viewModel
-            let settings = appModel.settings
-            switch target.kind {
-            case .clockIn:
-                await viewModel.clockIn(at: date)
-                settings.clearEnded()
-            case .breakOut:
-                await viewModel.clockOut(at: date)
-                settings.clearEnded()
-            case .endOfDay:
-                await viewModel.clockOut(at: date)
-                settings.markEndedToday()
-            }
-            HapticsController.play(appModel.haptics.settings)
+            await appModel.today.punch(target.kind, picked: pickerDate, tapTime: target.now)
             dismiss()
         }
     }
@@ -326,11 +333,11 @@ struct SessionSection: View {
     @State private var editingEnd = false
 
     var body: some View {
-        let sessions = appModel.viewModel.todaysSessions(now: now)
+        let sessions = appModel.today.sessions(now: now)
         VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Text(Keys.todaySessions)
-                    .font(.title2.bold())
+                    .font(.title3.bold())
                 Spacer()
                 Text(Keys.todayEditHint)
                     .font(.footnote)
@@ -376,8 +383,12 @@ private struct SessionRow: View {
     var body: some View {
         HStack(spacing: 12) {
             Circle()
-                .fill(session.isOpen ? Theme.overtime : Theme.accent)
+                .fill(session.isOpen ? Theme.overtimeFill : Theme.accent)
                 .frame(width: 9, height: 9)
+                .shadow(
+                    color: session.isOpen ? Theme.overtimeFill : Theme.accent,
+                    radius: 3
+                )
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .monospacedDigit()
@@ -385,7 +396,7 @@ private struct SessionRow: View {
                 if session.isOpen {
                     Text(Keys.sessionActive)
                         .font(.footnote)
-                        .foregroundStyle(Theme.overtime)
+                        .foregroundStyle(Theme.overtimeText)
                 }
             }
             Spacer()
@@ -519,6 +530,11 @@ private struct SessionEditSheet: View {
 #Preview("Today — idle") {
     TodayView()
         .environment(previewAppModel(seed: .empty))
+        .preferredColorScheme(.dark)
+}
+
+#Preview("Sessions section") {
+    SessionSection(now: .now, appModel: previewAppModel(seed: .clockedIn))
         .preferredColorScheme(.dark)
 }
 
